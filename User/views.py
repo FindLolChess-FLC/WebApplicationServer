@@ -2,10 +2,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
 from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer
 from .models import User, Token
+from .permission import IsAuthenticatedAndTokenVerified
 
 # Create your views here.
 
@@ -39,7 +39,7 @@ class SignInView(TokenObtainPairView):
 
 # 닉네임 변경
 class UpdateNicknameView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndTokenVerified]
     def get(self, request):
         user = request.user
         serializer = UpdateNicknameSerializer(user)
@@ -65,7 +65,7 @@ class UpdateNicknameView(APIView):
 
 # 비밀번호 변경
 class UpdatePasswordView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndTokenVerified]
     def patch(self, request):
         user = request.user
         serializer = UpdatePasswordSerializer(data = request.data)
@@ -82,3 +82,13 @@ class UpdatePasswordView(APIView):
 
         return Response({'resultcode': 'FAIL', 'message': '비밀번호 변경에 실패했습니다.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
+
+# 로그아웃
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticatedAndTokenVerified]
+    def delete(self, request):
+        try:
+            request.user.token.delete()
+            return Response({'resultcode': 'SUCCESS', 'message': '로그아웃 성공'}, status=status.HTTP_200_OK)
+        except:
+            return Response({'resultcode': 'FAIL', 'message': '이미 로그아웃된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
