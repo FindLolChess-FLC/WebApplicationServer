@@ -1,7 +1,8 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, Token
+from django.contrib.auth.password_validation import validate_password
+from .models import User
 
 # 회원가입
 class SignUpSerializer(serializers.ModelSerializer):
@@ -50,3 +51,12 @@ class UpdateNicknameSerializer(serializers.ModelSerializer):
         model = User
         fields = ['nickname']
 
+
+# 비밀번호 수정
+class UpdatePasswordSerializer(serializers.Serializer):
+    current = serializers.CharField(required=True)
+    new = serializers.CharField(required=True)
+
+    def validate_new(self, value):
+        validate_password(value)
+        return value

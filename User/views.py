@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer
+from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer
 from .models import User, Token
 
 # Create your views here.
@@ -61,3 +61,24 @@ class UpdateNicknameView(APIView):
         return Response({'resultcode': 'FAIL', 
                         'message': '닉네임 변경에 실패했습니다.',
                         'error':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# 비밀번호 변경
+class UpdatePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request):
+        user = request.user
+        serializer = UpdatePasswordSerializer(data = request.data)
+
+        if serializer.is_valid():
+            current = serializer.data.get('current')
+            new = serializer.data.get('new')
+            if user.check_password(current):
+                user.set_password(new)
+                user.save()
+                return Response({'resultcode': 'SUCCESS', 'message': '비밀번호가 성공적으로 변경되었습니다.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'resultcode': 'FAIL', 'message': '현재 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'resultcode': 'FAIL', 'message': '비밀번호 변경에 실패했습니다.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
