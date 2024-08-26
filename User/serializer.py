@@ -17,6 +17,7 @@ class SignUpSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+
 # 로그인시 jwt 토큰 발급
 class SignInSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -41,3 +42,11 @@ class SignInSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         return data
     
+
+# 닉네임 수정
+class UpdateNicknameSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['nickname']
+
