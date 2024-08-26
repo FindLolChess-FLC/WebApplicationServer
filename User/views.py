@@ -27,15 +27,18 @@ class SignUpView(APIView):
 class SignInView(TokenObtainPairView):
     def post(self, request):
         serializer = SignInSerializer(data=request.data)
-        if serializer.is_valid():
-            data = serializer.validated_data
-            user = authenticate(email=request.data['email'], password=request.data['password'])
-            Token.objects.create(user=user, token=data['access'])
-            return Response({'resultcode': 'SUCCESS',
-                            'access': data['access']}, status=status.HTTP_200_OK)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+        try:
+            if serializer.is_valid():
+                data = serializer.validated_data
+                user = authenticate(email=request.data['email'], password=request.data['password'])
+                Token.objects.create(user=user, token=data['access'])
+                return Response({'resultcode': 'SUCCESS',
+                                'access': data['access']}, status=status.HTTP_200_OK)
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except:
+            return Response({'message: 이미 로그인된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # 닉네임 변경
 class UpdateNicknameView(APIView):
@@ -84,7 +87,7 @@ class UpdatePasswordView(APIView):
     
 
 # 로그아웃
-class LogoutView(APIView):
+class SignOutView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
     def delete(self, request):
         try:
@@ -92,3 +95,23 @@ class LogoutView(APIView):
             return Response({'resultcode': 'SUCCESS', 'message': '로그아웃 성공'}, status=status.HTTP_200_OK)
         except:
             return Response({'resultcode': 'FAIL', 'message': '이미 로그아웃된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+# 이메일 중복 체크
+class EmailDuplicateView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        if User.objects.filter(email=email).exists():
+            return Response({'resultcode': 'FAIL', 'message': '중복된 이메일 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 이메일 입니다.'}, status=status.HTTP_200_OK)
+    
+
+# 닉네임 중복 체크
+class NicknameDuplicateView(APIView):
+    def post(self, request):
+        nickname = request.data.get('nickname')
+        if User.objects.filter(nickname=nickname).exists():
+            return Response({'resultcode': 'FAIL', 'message': '중복된 닉네임 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 닉네임 입니다.'}, status=status.HTTP_200_OK)
