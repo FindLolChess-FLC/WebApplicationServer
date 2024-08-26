@@ -60,3 +60,11 @@ class UpdatePasswordSerializer(serializers.Serializer):
     def validate_new(self, value):
         validate_password(value)
         return value
+    
+
+# 회원 탈퇴
+class DeleteIdSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['is_active']

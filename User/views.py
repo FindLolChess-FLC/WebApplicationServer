@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import authenticate
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer
+from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer
 from .models import User, Token
 from .permission import IsAuthenticatedAndTokenVerified
 
@@ -115,3 +115,19 @@ class NicknameDuplicateView(APIView):
             return Response({'resultcode': 'FAIL', 'message': '중복된 닉네임 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 닉네임 입니다.'}, status=status.HTTP_200_OK)
+    
+
+# 회원 탈퇴
+class DeleteIdView(APIView):
+    permission_classes = [IsAuthenticatedAndTokenVerified]
+    def patch(self, request):
+        user = request.user
+        serializer = DeleteIdSerializer(user, data={'is_active':False})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'resultcode': 'SUCCESS', 'message': '회원 탈퇴에 성공했습니다.'}, status=status.HTTP_200_OK)
+        
+        return Response({'resultcode': 'FAIL', 'error': serializer.errors, 'message': '회원 탈퇴에 실패 했습니다'}, status=status.HTTP_400_BAD_REQUEST)
+
+
