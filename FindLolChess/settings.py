@@ -29,6 +29,26 @@ DEBUG = config('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
+CORS_ALLOWED_ORIGINS  = [
+    config('REACT_SERVER_IP'),
+    config('REACT_SERVER'),
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    'Access-Control-Allow-Headers',
+    'Corss-origin-Opener-Policy', 
+    
+]
+
+
 
 # Application definition
 
@@ -43,10 +63,15 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
 
+    'corsheaders',
+
     'User',
+    'Crawling',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
