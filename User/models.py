@@ -41,12 +41,3 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['nickname']
 
     objects = UserManager()
-
-
-# 토큰
-class Token(models.Model):
-    token = models.CharField(max_length=355)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='token')
-
-    def __str__(self):
-        return f'{self.user.email}의 토큰'

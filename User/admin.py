@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Token
+from .models import User
 
 class UserAdmin(BaseUserAdmin):
     # Admin 목록 페이지에서 표시할 필드
@@ -31,4 +31,3 @@ class UserAdmin(BaseUserAdmin):
 
 # User 모델과 커스터마이즈된 UserAdmin 등록
 admin.site.register(User, UserAdmin)
-admin.site.register(Token)
