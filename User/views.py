@@ -4,10 +4,11 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import authenticate
 from django.core.cache import cache
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer
+from django.core.mail import EmailMessage
+from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer
 from .models import User
 from .permission import IsAuthenticatedAndTokenVerified
-
+import random
 # Create your views here.
 
 # 회원가입
@@ -110,6 +111,37 @@ class EmailDuplicateView(APIView):
         
         return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 이메일 입니다.'}, status=status.HTTP_200_OK)
     
+
+## 이메일 인증 코드
+class EmailVerification(APIView):
+    def get(self, request):
+        to = request.query_params.get('email')
+        if User.objects.filter(email=to).exists():
+            return Response({'resultcode': 'FAIL', 'message': '중복된 이메일 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        subject = 'FLC-FindLolChess'
+        from_email = 'gns0314@naver.com'
+        code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
+        message = f'FLC-FindLolChess 인증코드는 [{code}]입니다.'
+        EmailMessage(subject=subject, body=message, to=[to], from_email=from_email).send()
+        cache.set(to, code, timeout=180)
+
+        return Response({'resultcode': 'SUCCESS', 'message': '인증코드가 발송 되었습니다.'}, status=status.HTTP_200_OK) 
+
+    def post(self, request):
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            if cache.get(serializer['email'].value) == None:
+                return Response({'resultcode': 'FAIL', 'message': '인증시간이 만료되었습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if serializer['code'].value == cache.get(serializer['email'].value):
+                cache.delete(serializer['email'].value)
+                return Response({'resultcode': 'SUCCESS', 'message': '인증에 성공 했습니다.'}, status=status.HTTP_200_OK)
+            
+            return Response({'resultcode': 'FAIL', 'message': '잘못된 인증 코드 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'resultcode': 'FAIL', 'message': '잘못된 정보 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # 닉네임 중복 체크
 class NicknameDuplicateView(APIView):
