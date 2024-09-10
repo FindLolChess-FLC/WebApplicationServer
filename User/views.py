@@ -119,10 +119,10 @@ class EmailVerification(APIView):
         if User.objects.filter(email=to).exists():
             return Response({'resultcode': 'FAIL', 'message': '중복된 이메일 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        subject = 'FLC-FindLolChess'
+        subject = 'FLC-FindLolChess 인증 코드 입니다.'
         from_email = 'gns0314@naver.com'
         code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
-        message = f'FLC-FindLolChess 인증코드는 [{code}]입니다.'
+        message = f'FLC-FindLolChess 인증 코드는 [{code}]입니다.'
         EmailMessage(subject=subject, body=message, to=[to], from_email=from_email).send()
         cache.set(to, code, timeout=180)
 
