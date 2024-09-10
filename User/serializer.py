@@ -68,3 +68,9 @@ class DeleteIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['is_active']
+
+
+# 이메일 인증 
+class EmailVerificationSerializer(serializers.Serializer):
+    email = serializers.CharField(required=True)
+    code = serializers.IntegerField(required=True)

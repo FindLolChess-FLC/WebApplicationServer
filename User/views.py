@@ -3,10 +3,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import authenticate
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer
-from .models import User, Token
+from django.core.cache import cache
+from django.core.mail import EmailMessage
+from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer
+from .models import User
 from .permission import IsAuthenticatedAndTokenVerified
-
+import random
 # Create your views here.
 
 # 회원가입
@@ -27,17 +29,20 @@ class SignUpView(APIView):
 class SignInView(TokenObtainPairView):
     def post(self, request):
         serializer = SignInSerializer(data=request.data)
-        try:
-            if serializer.is_valid():
-                data = serializer.validated_data
-                user = authenticate(email=request.data['email'], password=request.data['password'])
-                Token.objects.create(user=user, token=data['access'])
+        if serializer.is_valid():
+            data = serializer.validated_data
+            user = authenticate(email=request.data['email'], password=request.data['password'])
+
+            if cache.get(user) == None:
+                cache.set(user, {'access': data['access']})
                 return Response({'resultcode': 'SUCCESS',
                                 'access': data['access']}, status=status.HTTP_200_OK)
             
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except:
-            return Response({'message: 이미 로그인된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'resultcode': 'FAIL', 'message': '이미 로그인된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'resultcode': 'FAIL', 
+                        'message': '로그인에 실패 했습니다.', 
+                        'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 닉네임 변경
@@ -83,7 +88,7 @@ class UpdatePasswordView(APIView):
             else:
                 return Response({'resultcode': 'FAIL', 'message': '현재 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'resultcode': 'FAIL', 'message': '비밀번호 변경에 실패했습니다.', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'resultcode': 'FAIL', 'message': '비밀번호 변경에 실패했습니다.', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 
 # 로그아웃
@@ -91,7 +96,7 @@ class SignOutView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
     def delete(self, request):
         try:
-            request.user.token.delete()
+            cache.delete(request.user)
             return Response({'resultcode': 'SUCCESS', 'message': '로그아웃 성공'}, status=status.HTTP_200_OK)
         except:
             return Response({'resultcode': 'FAIL', 'message': '이미 로그아웃된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -106,6 +111,37 @@ class EmailDuplicateView(APIView):
         
         return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 이메일 입니다.'}, status=status.HTTP_200_OK)
     
+
+## 이메일 인증 코드
+class EmailVerification(APIView):
+    def get(self, request):
+        to = request.query_params.get('email')
+        if User.objects.filter(email=to).exists():
+            return Response({'resultcode': 'FAIL', 'message': '중복된 이메일 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        subject = 'FLC-FindLolChess 인증 코드 입니다.'
+        from_email = 'gns0314@naver.com'
+        code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
+        message = f'FLC-FindLolChess 인증 코드는 [{code}]입니다.'
+        EmailMessage(subject=subject, body=message, to=[to], from_email=from_email).send()
+        cache.set(to, code, timeout=180)
+
+        return Response({'resultcode': 'SUCCESS', 'message': '인증코드가 발송 되었습니다.'}, status=status.HTTP_200_OK) 
+
+    def post(self, request):
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            if cache.get(serializer['email'].value) == None:
+                return Response({'resultcode': 'FAIL', 'message': '인증시간이 만료되었습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if serializer['code'].value == cache.get(serializer['email'].value):
+                cache.delete(serializer['email'].value)
+                return Response({'resultcode': 'SUCCESS', 'message': '인증에 성공 했습니다.'}, status=status.HTTP_200_OK)
+            
+            return Response({'resultcode': 'FAIL', 'message': '잘못된 인증 코드 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'resultcode': 'FAIL', 'message': '잘못된 정보 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 # 닉네임 중복 체크
 class NicknameDuplicateView(APIView):
@@ -128,6 +164,8 @@ class DeleteIdView(APIView):
             serializer.save()
             return Response({'resultcode': 'SUCCESS', 'message': '회원 탈퇴에 성공했습니다.'}, status=status.HTTP_200_OK)
         
-        return Response({'resultcode': 'FAIL', 'error': serializer.errors, 'message': '회원 탈퇴에 실패 했습니다'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'resultcode': 'FAIL',
+                        'message': '회원 탈퇴에 실패 했습니다',
+                        'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
