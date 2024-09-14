@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from .crawling import lolchess_crawling
+from Crawling.crawl.lolchess_crawling import lolchess_crawling
 
 class Command(BaseCommand):
 
