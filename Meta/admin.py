@@ -4,3 +4,4 @@ from .models import *
 
 admin.site.register(Synergy)
 admin.site.register(Champion)
+admin.site.register(Item)
