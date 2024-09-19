@@ -39,3 +39,4 @@ def item_crawling():
         else:
             Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
 
+    driver.quit()
