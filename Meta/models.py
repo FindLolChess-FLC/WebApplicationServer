@@ -3,14 +3,31 @@ from User.models import User
 
 
 class Synergy(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=15)
     effect = models.CharField(max_length=500)
 
     def __str__(self):
         return self.name
 
+
 class SynergyImg(models.Model):
     synergy = models.OneToOneField(Synergy, on_delete=models.CASCADE)
+    img_src = models.CharField(max_length=255)
+
+
+class Item(models.Model):
+    name = models.CharField(max_length=25)
+    kor_name = models.CharField(max_length=25)
+    effect = models.CharField(max_length=500)
+    item1 = models.CharField(max_length=25)
+    item2 = models.CharField(max_length=25)
+
+    def __str__(self):
+        return self.kor_name
+
+
+class ItemImg(models.Model):
+    item = models.OneToOneField(Item, on_delete=models.CASCADE)
     img_src = models.CharField(max_length=255)
 
 
@@ -21,6 +38,7 @@ class Champion(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class ChampionImg(models.Model):
     champion = models.OneToOneField(Champion, on_delete=models.CASCADE) 
@@ -39,7 +57,7 @@ class LolMetaChampion(models.Model):
     champion = models.ForeignKey(Champion, on_delete=models.CASCADE)
     star = models.IntegerField()  
     location = models.IntegerField() 
-    item = models.CharField(max_length=50)
+    item = models.ManyToManyField(Item)
 
 
 class Comment(models.Model):
