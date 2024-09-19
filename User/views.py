@@ -112,7 +112,7 @@ class EmailDuplicateView(APIView):
         return Response({'resultcode': 'SUCCESS', 'message': '사용 가능한 이메일 입니다.'}, status=status.HTTP_200_OK)
     
 
-## 이메일 인증 코드
+# 이메일 인증 코드
 class EmailVerification(APIView):
     def get(self, request):
         to = request.query_params.get('email')
