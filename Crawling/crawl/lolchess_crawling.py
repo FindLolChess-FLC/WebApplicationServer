@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 import re
+from Meta.models import * 
 
 # lolchess.gg 크롤링
 def lolchess_crawling():
@@ -9,7 +10,7 @@ def lolchess_crawling():
     driver = webdriver.Chrome()
 
     driver.get(url)
-    time.sleep(3)
+    driver.implicitly_wait(10)
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
@@ -66,3 +67,6 @@ def lolchess_crawling():
             '위치': meta_champ_location[num],
             '아이템': meta_champ_item[num]
         }
+
+    # for data in meta_data:
+    #     LolMeta.objects.get_or_create(title = list(data.keys())[0])

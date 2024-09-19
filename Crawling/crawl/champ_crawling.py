@@ -10,7 +10,7 @@ def champion_crawling():
     driver = webdriver.Chrome()
 
     driver.get(url)
-    time.sleep(10)
+    driver.implicitly_wait(10)
 
     champ_name_data = driver.find_elements(By.CSS_SELECTOR,'div.css-19aklyh > div > table > tbody > tr > td.css-1gwaozl > a > div.champions-info > strong')
     champ_synergy_data = driver.find_elements(By.CSS_SELECTOR, 'div.css-19aklyh > div > table > tbody > tr > td.css-1gwaozl > a > div.champions-info > ul')

@@ -16,3 +16,4 @@ class ChampionSearch(APIView):
             serializer = ChampionSerializer(champions, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
         
+

@@ -9,7 +9,7 @@ def synergy_crawling():
     driver = webdriver.Chrome()
 
     driver.get(url)
-    time.sleep(3)
+    driver.implicitly_wait(10)
 
     synergy_name_data = driver.find_elements(By.CSS_SELECTOR, 'div > div.css-tb5sq7.edroetd8 > h6')
     synergy_effect_data = driver.find_elements(By.CLASS_NAME, 'css-1dk1fk9.edroetd4')
