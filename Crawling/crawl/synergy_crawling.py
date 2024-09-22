@@ -15,6 +15,6 @@ def synergy_crawling():
     synergy_effect_data = driver.find_elements(By.CLASS_NAME, 'css-1dk1fk9.edroetd4')
 
     for name,effect in zip(synergy_name_data, synergy_effect_data):
-        Synergy.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text)
+        Synergy.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ' '))
 
     driver.quit()
