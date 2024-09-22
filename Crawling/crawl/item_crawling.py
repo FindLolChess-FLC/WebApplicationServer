@@ -7,6 +7,30 @@ import re
 import itertools
 from Meta.models import Item
 
+# 조합 아이템 번역
+def item_translation(data):
+    if data == 'BFSword':
+        return 'B.F.대검'
+    elif data == 'RecurveBow':
+        return '곡궁'
+    elif data == 'ChainVest':
+        return '쇠사슬 조끼'
+    elif data == 'NegatronCloak':
+        return '음전자 망토'
+    elif data == 'NeedlesslyLargeRod':
+        return '쓸데없이 큰 지팡이'
+    elif data == 'Tearofthegoddess':
+        return '여신의 눈물'
+    elif data == 'GiantsBelt':
+        return '거인의 허리띠'
+    elif data == 'SparringGloves':
+        return '연습용 장갑'
+    elif data == 'Spatula':
+        return '뒤집개'
+    elif data == 'FryingPan':
+        return '프라이팬'
+
+# 아이템 데이터 크롤링
 def item_crawling():
     url = 'https://lolchess.gg/meta/items?type=all'
     driver = webdriver.Chrome()
@@ -35,8 +59,13 @@ def item_crawling():
 
     for detail_item in all_item:
         if len(detail_item) > 4:
-            Item.objects.get_or_create(name = detail_item[0], item1 = detail_item[1], item2 = detail_item[2], kor_name = detail_item[3], effect = detail_item[4])
+            Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[3], 
+                                        kor_item1 = item_translation(detail_item[1]), item1 = detail_item[1],
+                                        kor_item2 = item_translation(detail_item[2]), item2 = detail_item[2], 
+                                        effect = detail_item[4])
         else:
             Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
 
     driver.quit()
+
+    

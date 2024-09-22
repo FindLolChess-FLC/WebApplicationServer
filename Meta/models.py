@@ -20,7 +20,9 @@ class Item(models.Model):
     kor_name = models.CharField(max_length=25)
     effect = models.CharField(max_length=500)
     item1 = models.CharField(max_length=25)
+    kor_item1 = models.CharField(max_length=25)
     item2 = models.CharField(max_length=25)
+    kor_item2 = models.CharField(max_length=25)
 
     def __str__(self):
         return self.kor_name
