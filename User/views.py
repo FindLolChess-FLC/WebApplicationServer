@@ -122,8 +122,27 @@ class EmailVerification(APIView):
         subject = 'FLC-FindLolChess 인증 코드 입니다.'
         from_email = 'gns0314@naver.com'
         code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
-        message = f'FLC-FindLolChess 인증 코드는 [{code}]입니다.'
-        EmailMessage(subject=subject, body=message, to=[to], from_email=from_email).send()
+        message = f"""
+                    <!DOCTYPE html>
+                    <html lang="ko">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>인증 코드</title>
+                    </head>
+                    <body>
+                    <div style="background-color: #f0f0f0; padding: 5px;">
+                        <div style="background-color: #ffffff;">
+                            <h1>FLC-FindLolChess 인증 코드</h1>
+                            <p>인증 코드는 <strong>{code}</strong>입니다.</p>
+                            <p>이 코드를 입력하여 인증을 완료하세요.</p>
+                        </div>
+                    </div>
+                    </body>
+                    </html>
+                    """
+        email = EmailMessage(subject=subject, body=message, to=[to], from_email=from_email)
+        email.content_subtype = 'html'  # 이메일 콘텐츠 타입을 HTML로 설정
+        email.send()
         cache.set(to, code, timeout=180)
 
         return Response({'resultcode': 'SUCCESS', 'message': '인증코드가 발송 되었습니다.'}, status=status.HTTP_200_OK) 
