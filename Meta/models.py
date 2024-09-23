@@ -53,6 +53,9 @@ class LolMeta(models.Model):
     like_count = models.IntegerField(default=0) 
     dislike_count = models.IntegerField(default=0) 
 
+    def __str__(self):
+        return self.title
+
 
 class LolMetaChampion(models.Model):
     meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE)
@@ -61,6 +64,8 @@ class LolMetaChampion(models.Model):
     location = models.IntegerField() 
     item = models.ManyToManyField(Item)
 
+    def __str__(self):
+        return f'{self.meta.title} - {self.champion.name}'
 
 class Comment(models.Model):
     lol_meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE) 
