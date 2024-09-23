@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Champion, Synergy, Item
+from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion
 
 
 class ChampionSerializer(serializers.ModelSerializer):
@@ -22,3 +22,16 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = '__all__'
+
+
+class LolMetaChampionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LolMetaChampion
+        fields = '__all__'
+
+
+class LolMetaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = LolMeta
+        fields = '__all__' 
