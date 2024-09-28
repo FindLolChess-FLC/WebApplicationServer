@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Champion, Synergy, Item, LolMeta
-from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer
+from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion
+from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer
 
 
 # 챔피언 조회
@@ -73,11 +73,34 @@ class ItemSearch(APIView):
 class MetaSearch(APIView):
     def get(self, requeset):
         metas = LolMeta.objects.all().order_by('id')
-        meta_champion_instance = [meta.lolmetachampion_set.all() for meta in metas]
-        meta_champ = [[champion for champion in champion_instance] for champion_instance in meta_champion_instance]
-        print(meta_champ)
-        serializer = LolMetaSerializer(metas, many=True)
-        return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+        meta_champions = LolMetaChampion.objects.all()
+        data = []
+
+        for meta in metas:
+            meta_data = {
+                "meta": LolMetaSerializer(meta).data,
+                "synergys": [],
+                "champions": []
+            }
+            meta_synergy = {}
+
+            for meta_champion in meta_champions:
+                if meta.id == meta_champion.meta.id:
+                    meta_data['champions'].append(LolMetaChampionSerializer(meta_champion).data)
+
+                    synergys = meta_champion.champion.synergy.all()
+                    
+                    for synergy in synergys:
+                        if synergy.name not in meta_synergy:
+                            meta_synergy[synergy.name] = 0
+                            meta_synergy[f'{synergy.name}의 효과'] = synergy.effect
+                        meta_synergy[synergy.name] += 1
+
+            meta_data['synergys'].append(meta_synergy)
+            data.append(meta_data)
+
+        return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+    
     def post(self, request):
         pass
 
