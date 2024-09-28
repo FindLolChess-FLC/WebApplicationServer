@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import time
 from Meta.models import Champion, Synergy
 from django.db import transaction
 

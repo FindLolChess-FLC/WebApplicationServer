@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import time
 from Meta.models import Synergy
 
 # 시너지 정보 저장
