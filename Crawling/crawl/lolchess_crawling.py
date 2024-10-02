@@ -1,7 +1,11 @@
 from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import re
 from Meta.models import * 
+
 
 # lolchess.gg 크롤링
 def lolchess_crawling():
@@ -21,6 +25,7 @@ def lolchess_crawling():
     meta_champ_location = []
     meta_champ_item = []
     meta_champ_star = []
+    meta_augments = []
     meta_data = {} 
 
     # 챔프, 제목 정보 추출
@@ -39,7 +44,24 @@ def lolchess_crawling():
         detail_meta_champ = []
         detail_champ_star = {}
         detail_champ_item = {}
-        
+        detail_meta_augments = []
+
+        if len(driver.find_elements(By.CSS_SELECTOR, '.css-1vpcif5.e1f4qx2j0 > div')) > 1:
+            augments_data = driver.find_elements(By.CSS_SELECTOR, '.css-xfs1a4.edddgya2 > div')
+            act = ActionChains(driver)
+
+            # 증강체 정보 추출
+            for augments in augments_data:
+                driver.execute_script("arguments[0].scrollIntoView();", augments)
+                act.move_to_element(augments).perform()
+                act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1 > div > strong')))
+                detail_meta_augments.append(act_data.text.replace(' ',''))
+                
+        else:
+            detail_meta_augments.append([])
+
+        meta_augments.append(detail_meta_augments)
+
         for champ in detail:
             detail_meta_champ.append(champ.text.replace(' ', ''))
 
@@ -62,16 +84,24 @@ def lolchess_crawling():
     # 최종 메타 데이터 구성
     for num in range(len(meta_link)):
         meta_data[meta_title[num]] = {
+            '증강': meta_augments[num],
             '챔프': meta_champ[num],
             '별': meta_champ_star[num],
             '위치': meta_champ_location[num],
             '아이템': meta_champ_item[num]
         }
+    
 
     for data in meta_data:
         meta, craeted = LolMeta.objects.get_or_create(title = data, win_rate = 0)
 
-        print(meta_data[data]['챔프'])
+        meta_augments = meta_data[data]['증강']
+        if len(meta_augments) > 1:
+            for augment in meta_augments:
+                for db_augment in Augmenter.objects.filter(name=augment):
+                    if augment == db_augment.name:
+                        meta.augmenter.add(db_augment)
+
         for champ_name in meta_data[data]['챔프']:
             champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
                                                         champion = Champion.objects.get(name = champ_name),

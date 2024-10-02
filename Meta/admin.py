@@ -16,5 +16,6 @@ class LolMetaAdmin(admin.ModelAdmin):
 admin.site.register(Synergy)
 admin.site.register(Champion)
 admin.site.register(Item)
+admin.site.register(Augmenter)
 admin.site.register(LolMeta, LolMetaAdmin)
 admin.site.register(LolMetaChampion)

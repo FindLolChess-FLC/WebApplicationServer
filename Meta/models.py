@@ -15,6 +15,20 @@ class SynergyImg(models.Model):
     img_src = models.CharField(max_length=255)
 
 
+class Augmenter(models.Model):
+    name = models.CharField(max_length=25)
+    effect = models.CharField(max_length=500)
+    tier = models.CharField(max_length=15)
+    
+    def __str__(self):
+            return self.name
+
+
+class AugmenterImg(models.Model):
+    augmenter = models.OneToOneField(Augmenter, on_delete=models.CASCADE)
+    img_src = models.CharField(max_length=255)
+
+
 class Item(models.Model):
     name = models.CharField(max_length=25)
     kor_name = models.CharField(max_length=25)
@@ -49,6 +63,7 @@ class ChampionImg(models.Model):
 
 class LolMeta(models.Model):
     title = models.CharField(max_length=50)
+    augmenter = models.ManyToManyField(Augmenter)
     win_rate = models.DecimalField(max_digits=5, decimal_places=2)
     like_count = models.IntegerField(default=0) 
     dislike_count = models.IntegerField(default=0) 
