@@ -158,5 +158,9 @@ class MetaSearch(APIView):
 
             data.append(meta_data)
 
+        if data == []:
+            return Response({'resultcode': 'FAIL', 'message': '잘못된 검색어 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+
+        
