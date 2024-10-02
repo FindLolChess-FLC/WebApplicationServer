@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion
+from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter
 
 
 class ChampionSerializer(serializers.ModelSerializer):
@@ -7,7 +7,7 @@ class ChampionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Champion
-        fields = ['name', 'price', 'synergy'] # 순서를 위해 all대신 원하는 순서로 설정
+        fields = ['name', 'price', 'synergy'] 
 
 
 class SynergySerializer(serializers.ModelSerializer):
@@ -24,11 +24,29 @@ class ItemSerializer(serializers.ModelSerializer):
         fields = ['kor_name','kor_item1', 'kor_item2', 'effect']
 
 
+class AugmenterSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Augmenter
+        fields = ['name', 'effect', 'tier']
+
+
 class LolMetaSerializer(serializers.ModelSerializer):
+    augmenter = AugmenterSerializer(many=True)
 
     class Meta:
         model = LolMeta
-        fields = '__all__' 
+        fields = ['title', 'augmenter','win_rate', 'like_count', 'dislike_count']
+
+    # 응답 커스텀
+    def to_representation(self, instance):
+        # 시리얼라이즈된 데이터 가져오기
+        representation = super().to_representation(instance)
+        
+        if not instance.augmenter.exists():
+            representation.pop('augmenter')
+        
+        return representation
 
 
 class LolMetaChampionSerializer(serializers.ModelSerializer):
