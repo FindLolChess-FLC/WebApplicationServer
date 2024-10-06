@@ -14,6 +14,9 @@ class SynergyImg(models.Model):
     synergy = models.OneToOneField(Synergy, on_delete=models.CASCADE)
     img_src = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.synergy.name
+
 
 class Augmenter(models.Model):
     name = models.CharField(max_length=25)
@@ -27,6 +30,9 @@ class Augmenter(models.Model):
 class AugmenterImg(models.Model):
     augmenter = models.OneToOneField(Augmenter, on_delete=models.CASCADE)
     img_src = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.augmenter.name
 
 
 class Item(models.Model):
@@ -46,6 +52,9 @@ class ItemImg(models.Model):
     item = models.OneToOneField(Item, on_delete=models.CASCADE)
     img_src = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.item.kor_name
+
 
 class Champion(models.Model):
     name = models.CharField(max_length=255)
@@ -59,6 +68,9 @@ class Champion(models.Model):
 class ChampionImg(models.Model):
     champion = models.OneToOneField(Champion, on_delete=models.CASCADE) 
     img_src = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.champion.name
 
 
 class LolMeta(models.Model):

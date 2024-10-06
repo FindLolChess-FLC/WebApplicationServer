@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter
-from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer
+from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer
 import re
 import itertools
 
@@ -13,7 +13,7 @@ class ChampionSearch(APIView):
         if name:
             champion_instance = Champion.objects.filter(name = name).first()
             
-            if serializer:
+            if champion_instance:
                 serializer = ChampionSerializer(champion_instance)       
                 return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
             else:
@@ -163,4 +163,30 @@ class MetaSearch(APIView):
 
         return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
 
-        
+
+class AugmenterSearch(APIView):
+    def get(self, request):
+        augmenter_name = request.query_params.get('name')
+        augmenter_tier = request.query_params.get('tier')
+
+        if augmenter_tier:
+            augmenter_instance = Augmenter.objects.filter(tier=augmenter_tier)
+            if augmenter_instance:
+                serializer = AugmenterSerializer(augmenter_instance, many=True)
+                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'resultcode': 'FAIL', 'message': '해당하는 티어가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if augmenter_name:
+            augmenter_instance = Augmenter.objects.filter(name=augmenter_name).first()
+
+            if augmenter_instance:
+                serializer = AugmenterSerializer(augmenter_instance)
+                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'resultcode': 'FAIL', 'message': '해당하는 증강체가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+            
+        else:
+            augmenters = Augmenter.objects.all().order_by('tier') 
+            serializer = AugmenterSerializer(augmenters, many=True)
+            return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
