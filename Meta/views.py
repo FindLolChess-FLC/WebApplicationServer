@@ -13,7 +13,7 @@ class ChampionSearch(APIView):
         if name:
             champion_instance = Champion.objects.filter(name = name).first()
             
-            if serializer:
+            if champion_instance:
                 serializer = ChampionSerializer(champion_instance)       
                 return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
             else:
