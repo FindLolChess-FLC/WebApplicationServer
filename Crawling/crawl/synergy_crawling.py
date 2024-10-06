@@ -1,6 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from Meta.models import Synergy
+from Meta.models import Synergy, SynergyImg
 
 # 시너지 정보 저장
 def synergy_crawling():
@@ -14,6 +14,6 @@ def synergy_crawling():
     synergy_effect_data = driver.find_elements(By.CLASS_NAME, 'css-1dk1fk9.edroetd4')
 
     for name,effect in zip(synergy_name_data, synergy_effect_data):
-        Synergy.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ' '))
-
+        synergy_instance, created = Synergy.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ' '))
+        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1727962249/tft/시너지/{synergy_instance.name}.png")
     driver.quit()

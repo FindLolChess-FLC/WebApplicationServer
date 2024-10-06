@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import re
 import itertools
-from Meta.models import Item
+from Meta.models import Item, ItemImg
 
 # 조합 아이템 번역
 def item_translation(data):
@@ -59,13 +59,30 @@ def item_crawling():
 
     for detail_item in all_item:
         if len(detail_item) > 4:
-            Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[3], 
+            item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[3], 
                                         kor_item1 = item_translation(detail_item[1]), item1 = detail_item[1],
                                         kor_item2 = item_translation(detail_item[2]), item2 = detail_item[2], 
                                         effect = detail_item[4])
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1728214940/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
         else:
-            Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
+            item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1728214940/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
 
+    comb_url = 'https://lolchess.gg/items/set12'
+    driver.get(comb_url)
+    driver.implicitly_wait(10)
+
+    comb_item_data = driver.find_elements(By.CSS_SELECTOR, '.css-uw2vh5.eqoykzw2 > button > div')
+    comb_act = ActionChains(driver)
+
+    for comb_item in comb_item_data:
+        comb_act.move_to_element(comb_item).perform()
+        act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
+
+        name = ''.join(re.findall(r'(?:items|item)/([^/_.]+)', comb_item.find_element(By.TAG_NAME, 'img').get_attribute('src')))
+        kor_name = act_data.find_element(By.TAG_NAME, 'strong').text
+        effect = act_data.find_element(By.TAG_NAME, 'p').text
+        
+        item_instance, created = Item.objects.get_or_create(name = name, kor_name = kor_name, effect = effect)
+        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1728214940/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
     driver.quit()
-
-    
