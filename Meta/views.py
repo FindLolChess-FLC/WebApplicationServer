@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter
 from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer
+from django.db.models import Q
 import re
-import itertools
+
 
 # 챔피언 조회
 class ChampionSearch(APIView):
@@ -111,23 +112,36 @@ class MetaSearch(APIView):
     def post(self, request):
 
         def find_db(data):
-            search_data = []
+            # 첫 번째 키워드 검색
+            first_keyword = data[0]
+            results = LolMeta.objects.none()  # 초기화
 
-            if Champion.objects.filter(name=data).exists():
-                search_data.append([lol_meta.meta for lol_meta in LolMetaChampion.objects.filter(champion__name=data)])
+            # 첫 번째 키워드에 따른 메타 정보 검색
+            if Champion.objects.filter(name=first_keyword).exists():
+                results = LolMeta.objects.filter(lolmetachampion__champion__name=first_keyword)
+            if Augmenter.objects.filter(name=first_keyword).exists():
+                results = LolMeta.objects.filter(augmenter__name=first_keyword)
+            if Synergy.objects.filter(name=first_keyword).exists():
+                results = LolMeta.objects.filter(lolmetachampion__champion__synergy__name=first_keyword)
+            if LolMeta.objects.filter(title=first_keyword).exists():
+                results = LolMeta.objects.filter(title=first_keyword)
 
-            if Augmenter.objects.filter(name=data).exists():
-                search_data.append([lol_meta.meta for lol_meta in LolMetaChampion.objects.filter(meta__augmenter__name=data)])
+            # 두 번째 및 세 번째 키워드 필터링
+            for keyword in data[1:]:
+                # 각 추가 키워드에 대해 결과 필터링
+                results = results.filter(
+                    Q(lolmetachampion__champion__name=keyword) |
+                    Q(augmenter__name=keyword) |
+                    Q(lolmetachampion__champion__synergy__name=keyword) |
+                    Q(title=keyword)
+                )
 
-            if Synergy.objects.filter(name=data).exists():
-                search_data.append([lol_meta.meta for lol_meta in LolMetaChampion.objects.filter(champion__synergy__name=data)])
-                
-            if LolMeta.objects.filter(title=data).exists():
-                search_data.append([lol_meta.meta for lol_meta in LolMetaChampion.objects.filter(meta__title=data)])
+            return [lol_meta for lol_meta in results.distinct()] 
 
-            return list(set(itertools.chain.from_iterable(search_data)))
-
-        total_data = find_db(request.data['data'])
+        search_data = list(map(lambda x:x.replace(' ',''), request.data['data'].split(',')))
+        
+        total_data = find_db(search_data)
+            
         data = []
 
         for meta in total_data:
