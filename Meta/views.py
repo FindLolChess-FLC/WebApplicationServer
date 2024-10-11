@@ -80,8 +80,7 @@ class MetaSearch(APIView):
         for meta in metas:
             meta_data = {
                 'meta': LolMetaSerializer(meta).data,
-                'synergys': [],
-                'champions': []
+                'synergys': []
             }
             meta_synergy = {}
 
@@ -91,7 +90,6 @@ class MetaSearch(APIView):
 
                     synergys = meta_champion.champion.synergy.all()
                     items = meta_champion.item.all()
-
 
                     for synergy in synergys:
                         if synergy.name not in meta_synergy:
@@ -137,7 +135,6 @@ class MetaSearch(APIView):
             meta_data = {
                 'meta': LolMetaSerializer(meta).data,
                 'synergys': {},
-                'champions': meta_champion
             }
             for champion in meta_champion:
                 champ_synergy = champion['champion']['synergy']
@@ -190,3 +187,4 @@ class AugmenterSearch(APIView):
             augmenters = Augmenter.objects.all().order_by('tier') 
             serializer = AugmenterSerializer(augmenters, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+        

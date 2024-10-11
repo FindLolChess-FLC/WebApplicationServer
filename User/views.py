@@ -5,8 +5,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import authenticate
 from django.core.cache import cache
 from django.core.mail import EmailMessage
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer
+from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer, FavoriteSerializer
 from .models import User
+from Meta.models import LolMeta
 from .permission import IsAuthenticatedAndTokenVerified
 import random
 # Create your views here.
@@ -188,3 +189,32 @@ class DeleteIdView(APIView):
                         'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# 즐겨 찾기
+class FavoriteView(APIView):
+    permission_classes = [IsAuthenticatedAndTokenVerified]
+
+    def get(self, request):
+        user = request.user
+
+        if user:
+            serializer = FavoriteSerializer(user)
+            return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response({'resultcode': 'FAIL',
+                        'message': '올바르지 않은 유저입니다.',
+                        'error': serializer.errors}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        user = request.user
+        meta_id = request.data['id']
+        
+        if user:
+            lol_meta = LolMeta.objects.get(id=meta_id)
+
+            if lol_meta:
+                user.favorite.add(lol_meta)
+                return Response({'resultcode': 'SUCCESS', 'data': '즐겨찾기 성공'}, status=status.HTTP_200_OK)
+            
+            return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 메타 아이디.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 유저입니다.'}, status=status.HTTP_404_NOT_FOUND)

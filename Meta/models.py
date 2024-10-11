@@ -1,5 +1,4 @@
 from django.db import models
-from User.models import User
 
 
 class Synergy(models.Model):
@@ -94,9 +93,14 @@ class LolMetaChampion(models.Model):
     def __str__(self):
         return f'{self.meta.title} - {self.champion.name}'
 
+
 class Comment(models.Model):
     lol_meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE) 
-    writer = models.ForeignKey(User, on_delete=models.CASCADE) 
-    content = models.TextField()  
+    content = models.TextField(max_length=500)  
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def writer(self):
+        from User.models import User
+        return User.objects.get(id=self.writer_id)
     
