@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Champion, ChampionImg, Synergy, SynergyImg, Item, ItemImg, LolMeta, LolMetaChampion, Augmenter, AugmenterImg
 
-
+# 챔피언 이미지
 class ChampionImgSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -9,6 +9,7 @@ class ChampionImgSerializer(serializers.ModelSerializer):
         fields = ['img_src'] 
 
 
+# 챔피언
 class ChampionSerializer(serializers.ModelSerializer):
     synergy = serializers.StringRelatedField(many=True) 
     img = ChampionImgSerializer(source='championimg', read_only=True)
@@ -28,6 +29,7 @@ class ChampionSerializer(serializers.ModelSerializer):
         return representation
 
 
+# 시너지 이미지
 class SynergyImgSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -35,6 +37,7 @@ class SynergyImgSerializer(serializers.ModelSerializer):
         fields = ['img_src']
 
 
+# 시너지
 class SynergySerializer(serializers.ModelSerializer):
     img = SynergyImgSerializer(source='synergyimg', read_only=True)
 
@@ -43,6 +46,7 @@ class SynergySerializer(serializers.ModelSerializer):
         fields = ['name', 'effect', 'img']
 
 
+# 아이템 이미지
 class ItemImgSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -50,6 +54,7 @@ class ItemImgSerializer(serializers.ModelSerializer):
         fields = ['img_src']
 
 
+# 아이템
 class ItemSerializer(serializers.ModelSerializer):
     img = ItemImgSerializer(source='itemimg', read_only=True)
 
@@ -58,6 +63,7 @@ class ItemSerializer(serializers.ModelSerializer):
         fields = ['kor_name','kor_item1', 'kor_item2', 'effect', 'img']
 
 
+# 증강체 이미지
 class AugmenterImgSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -65,7 +71,7 @@ class AugmenterImgSerializer(serializers.ModelSerializer):
         fields = ['img_src']
 
 
-
+# 증강체
 class AugmenterSerializer(serializers.ModelSerializer):
     img = ItemImgSerializer(source='augmenterimg', read_only=True)
 
@@ -74,24 +80,7 @@ class AugmenterSerializer(serializers.ModelSerializer):
         fields = ['name', 'effect', 'tier', 'img']
 
 
-class LolMetaSerializer(serializers.ModelSerializer):
-    augmenter = AugmenterSerializer(many=True)
-
-    class Meta:
-        model = LolMeta
-        fields = ['title', 'augmenter','win_rate', 'like_count', 'dislike_count']
-
-    # 응답 커스텀
-    def to_representation(self, instance):
-        # 시리얼라이즈된 데이터 가져오기
-        representation = super().to_representation(instance)
-        
-        if not instance.augmenter.exists():
-            representation.pop('augmenter')
-        
-        return representation
-
-
+# 롤 메타 챔피언
 class LolMetaChampionSerializer(serializers.ModelSerializer):
     champion = ChampionSerializer()
     item = ItemSerializer(many=True)
@@ -107,5 +96,26 @@ class LolMetaChampionSerializer(serializers.ModelSerializer):
         
         if not instance.item.exists():
             representation.pop('item')
+        
+        return representation
+
+
+# 롤 메타
+class LolMetaSerializer(serializers.ModelSerializer):
+    augmenter = AugmenterSerializer(many=True)
+    lol_meta_champions = LolMetaChampionSerializer(source='lolmetachampion_set', many=True) 
+
+    class Meta:
+        model = LolMeta
+        fields = ['id', 'title', 'augmenter', 'win_rate', 'like_count', 'dislike_count', 'lol_meta_champions'] 
+    # 응답 커스텀
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        
+        if not instance.augmenter.exists():
+            representation.pop('augmenter')
+        
+        if not instance.lolmetachampion_set.exists(): 
+            representation.pop('lol_meta_champions')
         
         return representation
