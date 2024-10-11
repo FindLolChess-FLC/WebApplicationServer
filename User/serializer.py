@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from .models import User
+from Meta.serializer import LolMetaSerializer, LolMetaChampionSerializer
 
 # 회원가입
 class SignUpSerializer(serializers.ModelSerializer):
@@ -74,3 +75,12 @@ class DeleteIdSerializer(serializers.ModelSerializer):
 class EmailVerificationSerializer(serializers.Serializer):
     email = serializers.CharField(required=True)
     code = serializers.IntegerField(required=True)
+
+
+# 즐겨찾기
+class FavoriteSerializer(serializers.ModelSerializer):
+    favorite = LolMetaSerializer(many=True)
+
+    class Meta:
+        model = User
+        fields = ['favorite']
