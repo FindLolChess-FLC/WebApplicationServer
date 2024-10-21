@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Champion, ChampionImg, Synergy, SynergyImg, Item, ItemImg, LolMeta, LolMetaChampion, Augmenter, AugmenterImg
+from .models import Champion, ChampionImg, Synergy, SynergyImg, Item, ItemImg, LolMeta, LolMetaChampion, Augmenter, AugmenterImg, MetaReaction, Comment
+
 
 # 챔피언 이미지
 class ChampionImgSerializer(serializers.ModelSerializer):
@@ -103,11 +104,12 @@ class LolMetaChampionSerializer(serializers.ModelSerializer):
 # 롤 메타
 class LolMetaSerializer(serializers.ModelSerializer):
     augmenter = AugmenterSerializer(many=True)
-    lol_meta_champions = LolMetaChampionSerializer(source='lolmetachampion_set', many=True) 
+    champions = LolMetaChampionSerializer(source='lolmetachampion_set', many=True) 
 
     class Meta:
         model = LolMeta
-        fields = ['id', 'title', 'augmenter', 'win_rate', 'like_count', 'dislike_count', 'lol_meta_champions'] 
+        fields = ['id', 'title', 'augmenter', 'win_rate', 'like_count', 'dislike_count', 'champions'] 
+
     # 응답 커스텀
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -119,3 +121,27 @@ class LolMetaSerializer(serializers.ModelSerializer):
             representation.pop('lol_meta_champions')
         
         return representation
+    
+
+# 반응
+class ReactionSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = MetaReaction
+        fields = ['lol_meta']
+
+
+# 댓글
+class CommentSerializer(serializers.ModelSerializer):
+    lol_meta = serializers.SerializerMethodField()
+    writer = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'lol_meta', 'writer', 'created_at', 'content']
+
+    def get_lol_meta(self,obj):
+        return obj.lol_meta.title
+    
+    def get_writer(self,obj):
+        return obj.writer.nickname

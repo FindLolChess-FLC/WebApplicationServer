@@ -5,7 +5,9 @@ from django.core.cache import cache
 class IsAuthenticatedAndTokenVerified(IsAuthenticated):
     def has_permission(self, request, view):
         auth_header = request.META.get('HTTP_AUTHORIZATION')
-        token = auth_header.split(' ')[1]
+        if auth_header:
+            token = auth_header.split(' ')[1]
+            
         user = request.user
         if not super().has_permission(request, view):
             return False
