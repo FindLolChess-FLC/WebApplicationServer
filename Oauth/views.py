@@ -12,10 +12,10 @@ import random
 
 # 닉네임 중복시 뒤에 1~99999 랜덤 숫자 붙여주기
 def generate_unique_nickname(nickname):
-                while User.objects.filter(nickname=nickname).exists():
-                    nickname = f'{nickname}{random.randint(1, 99999)}'
-                return nickname
-            
+    while User.objects.filter(nickname=nickname).exists():
+        nickname = f'{nickname}{random.randint(1, 99999)}'
+    return nickname
+
 
 # 구글 로그인 url 발급
 class GoogleSignInUrlView(APIView):
@@ -70,6 +70,10 @@ class GoogleSigInView(APIView):
             
             cache.set(user.email, {'access': access_token})
             data = {'email':email, 'nickname':nickname, 'access':access_token}
+
+            if user_response.get('name') != user.nickname:
+                data['message'] = '닉네임이 중복되어 변경되었습니다.'
+
             return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
         else:
             return Response({'resultcode': 'FAIL',
@@ -126,6 +130,10 @@ class KakaoSigninView(APIView):
             
             cache.set(user.email, {'access': access_token})
             data = {'email':email, 'nickname':nickname, 'access':access_token}
+
+            if user_response['kakao_account']['profile'].get('nickname') != user.nickname:
+                data['message'] = '닉네임이 중복되어 변경되었습니다.'
+
             return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
         else:
             return Response({'resultcode': 'FAIL',
