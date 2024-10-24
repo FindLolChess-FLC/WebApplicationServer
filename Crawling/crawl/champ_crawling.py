@@ -23,7 +23,7 @@ def champion_crawling():
                 yuumi_champion_instance, created = Champion.objects.get_or_create(name='유미', price=1)
                 ChampionImg.objects.get_or_create(champion=yuumi_champion_instance, img_src='https://res.cloudinary.com/dcc862pgc/image/upload/v1728216427/tft/챔피언/유미.png')
                 synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
-                champion_instance.synergy.add(*synergy_instances)
+                nora_champion_instance.synergy.add(*synergy_instances)
             else:
                 champion_instance, created = Champion.objects.get_or_create(name=name.text.replace(' ', ''), price=price.text[1])
                 ChampionImg.objects.get_or_create(champion=champion_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1728216427/tft/챔피언/{name.text.replace(' ','')}.png")
