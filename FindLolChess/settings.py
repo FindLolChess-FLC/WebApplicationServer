@@ -66,7 +66,12 @@ INSTALLED_APPS = [
     'User',
     'Crawling',
     'Meta',
+    'Oauth',
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  
+)
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

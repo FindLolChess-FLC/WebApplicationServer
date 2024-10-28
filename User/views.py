@@ -10,7 +10,7 @@ from .models import User
 from Meta.models import LolMeta
 from .permission import IsAuthenticatedAndTokenVerified
 import random
-# Create your views here.
+
 
 # 회원가입
 class SignUpView(APIView):

@@ -87,9 +87,8 @@ class MetaSearchView(APIView):
             meta_synergy = {}
 
             for meta_champion in meta_champions:
+                
                 if meta.id == meta_champion.meta.id:
-                    meta_data['champions'].append(LolMetaChampionSerializer(meta_champion).data)
-
                     synergys = meta_champion.champion.synergy.all()
                     items = meta_champion.item.all()
 

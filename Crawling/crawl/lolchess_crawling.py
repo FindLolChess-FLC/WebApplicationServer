@@ -17,7 +17,7 @@ def lolchess_crawling():
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
-    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-1jardaz.emls75t6 > a')
+    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t6 > div.link-wrapper > a')
 
     meta_link = [link.get_attribute('href') for link in crawl_meta_link]
     meta_title = []
@@ -91,7 +91,6 @@ def lolchess_crawling():
             '아이템': meta_champ_item[num]
         }
     
-
     for data in meta_data:
         meta, craeted = LolMeta.objects.get_or_create(title = data, win_rate = 0)
 
