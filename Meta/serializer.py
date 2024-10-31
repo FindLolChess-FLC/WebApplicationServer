@@ -108,7 +108,7 @@ class LolMetaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LolMeta
-        fields = ['id', 'title', 'augmenter', 'win_rate', 'like_count', 'dislike_count', 'champions'] 
+        fields = ['id', 'title', 'augmenter', 'win_rate', 'like_count', 'dislike_count', 'reroll_lv','champions'] 
 
     # 응답 커스텀
     def to_representation(self, instance):

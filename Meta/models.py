@@ -79,6 +79,7 @@ class LolMeta(models.Model):
     win_rate = models.DecimalField(max_digits=5, decimal_places=2)
     like_count = models.IntegerField(default=0) 
     dislike_count = models.IntegerField(default=0) 
+    reroll_lv = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title

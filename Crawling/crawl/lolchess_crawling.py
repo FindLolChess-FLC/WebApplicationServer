@@ -6,7 +6,16 @@ from selenium.webdriver.common.by import By
 import re
 from Meta.models import * 
 
-
+def reroll_lv(level):
+    if level == 1:
+        return 5
+    elif level == 2:
+        return 6
+    elif level == 3:
+        return 7
+    else:
+        return 8
+    
 # lolchess.gg 크롤링
 def lolchess_crawling():
     url = 'https://lolchess.gg/meta'
@@ -93,7 +102,7 @@ def lolchess_crawling():
     
     for data in meta_data:
         meta, craeted = LolMeta.objects.get_or_create(title = data, win_rate = 0)
-
+        
         meta_augments = meta_data[data]['증강']
         if len(meta_augments) > 1:
             for augment in meta_augments:
@@ -101,14 +110,25 @@ def lolchess_crawling():
                     if augment == db_augment.name:
                         meta.augmenter.add(db_augment)
 
+        champ_star = {1:0, 2:0, 3:0, 4:0, 5:0} 
         for champ_name in meta_data[data]['챔프']:
             champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
                                                         champion = Champion.objects.get(name = champ_name),
                                                         star = meta_data[data]['별'][champ_name], 
                                                         location = meta_data[data]['위치'][champ_name])
             
+            price = Champion.objects.get(name = champ_name).price
+
+            champ_star[price] += meta_data[data]['별'][champ_name]
+
             champ_item = meta_data[data]['아이템'][champ_name]
 
             if len(champ_item) > 0 :
                 for item in champ_item:
                     champion.item.add(Item.objects.get(name=item[0]))
+
+        max_value = max(champ_star.values())
+        max_keys = [key for key, value in champ_star.items() if value == max_value]
+
+        meta.reroll_lv=reroll_lv(max(max_keys))
+        meta.save()
