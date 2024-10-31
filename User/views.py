@@ -9,6 +9,7 @@ from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerial
 from .models import User
 from Meta.models import LolMeta
 from .permission import IsAuthenticatedAndTokenVerified
+from decouple import config
 import random
 
 
@@ -121,7 +122,7 @@ class EmailVerification(APIView):
             return Response({'resultcode': 'FAIL', 'message': '중복된 이메일 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
         subject = 'FLC-FindLolChess 인증 코드 입니다.'
-        from_email = 'gns0314@naver.com'
+        from_email = config('EMAIL_HOST_USER')
         code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
         message = f"""
                     <!DOCTYPE html>
