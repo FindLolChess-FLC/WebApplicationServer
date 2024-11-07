@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Synergy(models.Model):
@@ -58,7 +59,7 @@ class ItemImg(models.Model):
 
 class Champion(models.Model):
     name = models.CharField(max_length=255)
-    price = models.IntegerField() 
+    price = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)]) 
     synergy = models.ManyToManyField(Synergy)
 
     def __str__(self):
@@ -77,9 +78,9 @@ class LolMeta(models.Model):
     title = models.CharField(max_length=50)
     augmenter = models.ManyToManyField(Augmenter)
     win_rate = models.DecimalField(max_digits=5, decimal_places=2)
-    like_count = models.IntegerField(default=0) 
-    dislike_count = models.IntegerField(default=0) 
-    reroll_lv = models.IntegerField(default=0)
+    like_count = models.IntegerField(default=0, validators=[MinValueValidator(0)] ) 
+    dislike_count = models.IntegerField(default=0, validators=[MinValueValidator(0)]) 
+    reroll_lv = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(10)] )
 
     def __str__(self):
         return self.title
