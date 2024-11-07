@@ -620,6 +620,39 @@ class DeleteIdView(APIView):
 class CheckFavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
+    @swagger_auto_schema(
+    operation_description='즐겨찾기 조회',
+    operation_summary='즐겨찾기 조회',
+    operation_id='즐겨찾기_조회',
+    tags=['즐겨찾기'],
+    mmanual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+    responses={
+        200: openapi.Response(
+            description='회원 탈퇴에 성공했습니다.',
+            schema=FavoriteSerializer,
+        ),
+        404: openapi.Response(
+            description='올바르지 않은 유저입니다.',
+            examples={
+                'application/json': 
+                    {'resultcode': 'FAIL', 
+                    'message': '올바르지 않은 유저입니다.',
+                    'error': 'stirng'
+                    },
+                
+            }
+        ),
+    }
+)
+    
     def get(self, request):
         user = request.user
 
@@ -636,6 +669,59 @@ class CheckFavoriteView(APIView):
 class FavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
+    @swagger_auto_schema(
+    operation_description='즐겨찾기',
+    operation_summary='즐겨찾기',
+    operation_id='즐겨찾기',
+    tags=['즐겨찾기'],
+    mmanual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_STRING, description='메타 아이디'),
+        },
+        required=['id'],  
+    ),
+    responses={
+        200: openapi.Response(
+            description='즐겨찾기에 성공했습니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'SUCCESS',
+                    'message': '즐겨찾기에 성공했습니다.'
+                }
+            }
+        ),
+        400: openapi.Response(
+            description='이미 즐겨찾기 된 메타입니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'FAIL',
+                    'message': '이미 즐겨찾기 된 메타입니다.'
+                }
+            }
+        ),
+        404: openapi.Response(
+            description='잘못된 정보 입니다.',
+            examples={
+                'application/json': [
+                    {'resultcode': 'FAIL', 'message': '올바르지 않은 유저입니다.'},
+                    {'resultcode': 'FAIL', 'message': '올바르지 않은 메타아이디 입니다.'},
+                    ]
+                
+            }
+        ),
+    }
+)
+    
     def post(self, request):
         user = request.user
         meta_id = request.data['id']
@@ -646,9 +732,9 @@ class FavoriteView(APIView):
 
                 if lol_meta:
                     user.favorite.add(lol_meta)
-                    return Response({'resultcode': 'SUCCESS', 'data': '즐겨찾기 성공'}, status=status.HTTP_200_OK)
+                    return Response({'resultcode': 'SUCCESS', 'data': '즐겨찾기에 성공했습니다.'}, status=status.HTTP_200_OK)
                 
-                return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 메타 아이디 입니다.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 메타 아이디입니다.'}, status=status.HTTP_404_NOT_FOUND)
             
             return Response({'resultcode': 'FAIL', 'message': '이미 즐겨찾기 된 메타입니다.'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -659,6 +745,59 @@ class FavoriteView(APIView):
 class DeleteFavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
+    @swagger_auto_schema(
+    operation_description='즐겨찾기',
+    operation_summary='즐겨찾기',
+    operation_id='즐겨찾기',
+    tags=['즐겨찾기'],
+    mmanual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_STRING, description='메타 아이디'),
+        },
+        required=['id'],  
+    ),
+    responses={
+        200: openapi.Response(
+            description='즐겨찾기 삭제에 성공했습니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'SUCCESS',
+                    'message': '즐겨찾기 삭제에 성공했습니다.'
+                }
+            }
+        ),
+        400: openapi.Response(
+            description='이미 즐겨찾기 된 메타입니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'FAIL',
+                    'message': '이미 즐겨찾기 된 메타입니다.'
+                }
+            }
+        ),
+        404: openapi.Response(
+            description='잘못된 정보 입니다.',
+            examples={
+                'application/json': [
+                    {'resultcode': 'FAIL', 'message': '올바르지 않은 유저입니다.'},
+                    {'resultcode': 'FAIL', 'message': '올바르지 않은 메타아이디 입니다.'},
+                    ]
+                
+            }
+        ),
+    }
+)
+    
     def delete(self, request):
         user = request.user
         meta_id = request.data['id']
@@ -670,9 +809,9 @@ class DeleteFavoriteView(APIView):
 
                 if meta.exists():
                     user.favorite.remove(meta[0])
-                    return Response({'resultcode': 'SUCCESS', 'data': '즐겨찾기 삭제 성공'}, status=status.HTTP_200_OK)
+                    return Response({'resultcode': 'SUCCESS', 'data': '즐겨찾기 삭제에 성공했습니다.'}, status=status.HTTP_200_OK)
                 
-                return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 메타 아이디 입니다.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'resultcode': 'FAIL', 'message': '올바르지 않은 메타 아이디입니다.'}, status=status.HTTP_404_NOT_FOUND)
             
             return Response({'resultcode': 'FAIL', 'message': '이미 삭제된 메타입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
