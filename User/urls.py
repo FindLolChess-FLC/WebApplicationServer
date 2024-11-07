@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SignInView, SignUpView, UpdateNicknameView, UpdatePasswordView, SignOutView, EmailDuplicateView, NicknameDuplicateView, DeleteIdView, EmailVerification, FavoriteView
+from .views import SignInView, SignUpView, UpdateNicknameView, UpdatePasswordView, SignOutView, EmailDuplicateView, NicknameDuplicateView, DeleteIdView, EmailVerification, FavoriteView, CheckFavoriteView, DeleteFavoriteView
 
 urlpatterns = [
     path('signup/', SignUpView.as_view()), # 회원가입
@@ -11,5 +11,7 @@ urlpatterns = [
     path('nicknameduplicate/', NicknameDuplicateView.as_view()), # 닉네임 중복 체크
     path('deleteid/', DeleteIdView.as_view()), # 회원탈퇴
     path('verification/', EmailVerification.as_view()), # 인증 코드 발급 / 인증
-    path('favorite/', FavoriteView.as_view()), # 즐겨찾기
+    path('checkfavorite/', CheckFavoriteView.as_view()), # 즐겨찾기 조회
+    path('favorite/', FavoriteView.as_view()), # 즐겨찾기 
+    path('deletefavorite/', DeleteFavoriteView.as_view()), # 즐겨찾기 삭제
 ]
