@@ -41,7 +41,7 @@ class GoogleSigInView(APIView):
             'code': auth_code,
             'client_id': config('GOOGLE_KEY'),
             'client_secret': config('GOOGLE_SECRET'),
-            'redirect_uri': config('GOOGLE_REDIRECT_URI'),
+            'redirect_uri': config('GOOGLE_REDIRECT_URI2'),
             'grant_type': config('GOOGLE_GRANT_TYPE'),
         }
 
@@ -105,7 +105,7 @@ class KakaoSigninView(APIView):
             'code': auth_code,
             'client_id': config('KAKAO_KEY'),
             'client_secret': config('KAKAO_SECRET'),
-            'redirect_uri': config('KAKAO_REDIRECT_URI'),
+            'redirect_uri': config('KAKAO_REDIRECT_URI2'),
             'grant_type': config('KAKAO_GRANT_TYPE'),
         }
 
@@ -176,7 +176,7 @@ class NaverSigninView(APIView):
             'code': auth_code,
             'client_id': config('NAVER_KEY'),
             'client_secret': config('NAVER_SECRET'),
-            'redirect_uri': config('NAVER_REDIRECT_URI'),
+            'redirect_uri': config('NAVER_REDIRECT_URI2'),
             'grant_type': config('NAVER_GRANT_TYPE'),
             'state': state
         }
