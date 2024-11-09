@@ -6,10 +6,43 @@ from .serializer import ChampionSerializer, ItemSerializer, SynergySerializer, L
 from django.db.models import Q
 from django.utils import timezone
 from User.permission import IsAuthenticatedAndTokenVerified
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 import re
 
 # 챔피언 조회
 class ChampionSearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='챔피언 조회',
+        operation_summary='챔피언 조회',
+        operation_id='기본_챔피언',
+        tags=['기본'],
+        manual_parameters=[
+            openapi.Parameter(
+                'name',
+                openapi.IN_QUERY,
+                description='조회할 챔피언의 이름. 이 파라미터가 없으면 모든 챔피언을 조회합니다.',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 챔피언 정보를 조회했습니다.',
+                schema=ChampionSerializer,
+            ),
+            404: openapi.Response(
+                description='해당 챔피언 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 챔피언이 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         name = request.query_params.get('name')
         if name:
@@ -29,6 +62,37 @@ class ChampionSearchView(APIView):
 
 # 시너지 조회
 class SynergySearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='시너지 조회',
+        operation_summary='시너지 조회',
+        operation_id='기본_시너지',
+        tags=['기본'],
+        manual_parameters=[
+            openapi.Parameter(
+                'name',
+                openapi.IN_QUERY,
+                description='조회할 시너지의 이름. 이 파라미터가 없으면 모든 시너지를 조회합니다.',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 시너지 정보를 조회했습니다.',
+                schema=SynergySerializer,
+            ),
+            404: openapi.Response(
+                description='해당 시너지 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 시너지가 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         synergy = request.query_params.get('name')
         if synergy:
@@ -55,6 +119,37 @@ class SynergySearchView(APIView):
 
 # 아이템 조회
 class ItemSearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='아이템 조회',
+        operation_summary='아이템 조회',
+        operation_id='기본_아이템',
+        tags=['기본'],
+        manual_parameters=[
+            openapi.Parameter(
+                'name',
+                openapi.IN_QUERY,
+                description='조회할 아이템의 이름. 이 파라미터가 없으면 모든 아이템을 조회합니다.',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 아이템 정보를 조회했습니다.',
+                schema=ItemSerializer,
+            ),
+            404: openapi.Response(
+                description='해당 아이템 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 아이템이 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         item = request.query_params.get('name')
         if item:
@@ -70,10 +165,83 @@ class ItemSearchView(APIView):
             items = Item.objects.all().order_by('id') 
             serializer = ItemSerializer(items, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
-        
+
+
+# 증강체 조회
+class AugmenterSearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='증강체 조회',
+        operation_summary='증강체 조회',
+        operation_id='기본_증강체',
+        tags=['기본'],
+        manual_parameters=[
+            openapi.Parameter(
+                'name',
+                openapi.IN_QUERY,
+                description='조회할 아이템의 이름. 이 파라미터가 없으면 모든 아이템을 조회합니다.',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 증강체 정보를 조회했습니다.',
+                schema=AugmenterSerializer,
+            ),
+            404: openapi.Response(
+                description='해당 증강체 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 증강체가 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
+    def get(self, request):
+        augmenter_name = request.query_params.get('name')
+        augmenter_tier = request.query_params.get('tier')
+
+        if augmenter_tier:
+            augmenter_instance = Augmenter.objects.filter(tier=augmenter_tier)
+            if augmenter_instance:
+                serializer = AugmenterSerializer(augmenter_instance, many=True)
+                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'resultcode': 'FAIL', 'message': '해당하는 티어가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if augmenter_name:
+            augmenter_instance = Augmenter.objects.filter(name=augmenter_name).first()
+
+            if augmenter_instance:
+                serializer = AugmenterSerializer(augmenter_instance)
+                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'resultcode': 'FAIL', 'message': '해당하는 증강체가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
+            
+        else:
+            augmenters = Augmenter.objects.all().order_by('tier') 
+            serializer = AugmenterSerializer(augmenters, many=True)
+            return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+
 
 # 메타 조회
 class MetaSearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='전체 메타 조회',
+        operation_summary='전체 메타 조회',
+        operation_id='메타_전체메타',
+        tags=['메타'],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 메타 정보를 조회했습니다.',
+                schema=LolMetaSerializer,
+            ),
+        }
+    )
+
     def get(self, requeset):
         metas = LolMeta.objects.all().order_by('id')
         meta_champions = LolMetaChampion.objects.all()
@@ -109,6 +277,35 @@ class MetaSearchView(APIView):
 
         return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
     
+    @swagger_auto_schema(
+        operation_description='메타 조회',
+        operation_summary='메타 조회',
+        operation_id='메타_메타',
+        tags=['메타'],
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'data': openapi.Schema(type=openapi.TYPE_STRING, description="조회할 메타 데이터, ','로 구분하여 입력. 예: '직스, 누누'"),
+        },
+        required=['data'],  
+    ),
+        responses={
+            200: openapi.Response(
+                description='성공적으로 메타 정보를 조회했습니다.',
+                schema=LolMetaSerializer,
+            ),
+            404: openapi.Response(
+                description='해당 메타 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 메타가 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def post(self, request):
 
         def find_db(data):
@@ -179,51 +376,117 @@ class MetaSearchView(APIView):
             data.append(meta_data)
 
         if data == []:
-            return Response({'resultcode': 'FAIL', 'message': '잘못된 검색어 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
         return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
 
-# 증강체 조회
-class AugmenterSearchView(APIView):
-    def get(self, request):
-        augmenter_name = request.query_params.get('name')
-        augmenter_tier = request.query_params.get('tier')
-
-        if augmenter_tier:
-            augmenter_instance = Augmenter.objects.filter(tier=augmenter_tier)
-            if augmenter_instance:
-                serializer = AugmenterSerializer(augmenter_instance, many=True)
-                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
-            else:
-                return Response({'resultcode': 'FAIL', 'message': '해당하는 티어가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
-            
-        if augmenter_name:
-            augmenter_instance = Augmenter.objects.filter(name=augmenter_name).first()
-
-            if augmenter_instance:
-                serializer = AugmenterSerializer(augmenter_instance)
-                return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
-            else:
-                return Response({'resultcode': 'FAIL', 'message': '해당하는 증강체가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
-            
-        else:
-            augmenters = Augmenter.objects.all().order_by('tier') 
-            serializer = AugmenterSerializer(augmenters, many=True)
-            return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
 
 # 리액션 조회
 class CheckReactionView(APIView):
+    permission_classes = [IsAuthenticatedAndTokenVerified]
+    @swagger_auto_schema(
+        operation_description='리액션 조회',
+        operation_summary='리액션 조회',
+        operation_id='리액션_조회',
+        tags=['리액션'],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 유저 리액션 정보를 조회했습니다.',
+                schema=ReactionSerializer,
+            ),
+            404: openapi.Response(
+                description='해당 유저 정보를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 유저가 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         user = request.user
         data = MetaReaction.objects.filter(user=user)
         if user:
             serializer = ReactionSerializer(data, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+        
+        return Response({'resultcode': 'FAIL', 'message': '잘못된 토큰 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 리액션 하기
 class ReactionView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
+    @swagger_auto_schema(
+        operation_description='리액션 하기',
+        operation_summary='리액션 하기',
+        operation_id='리액션_하기',
+        tags=['리액션'],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description='메타 ID'
+            ),
+            'action': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='like 또는 dislike값을 입력해주세요.'
+            )
+        },
+        required=['id', 'action'], 
+    ),
+        responses={
+            200: openapi.Response(
+                description='성공적으로 유저 리액션 정보를 조회했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'likes': 'integer', 
+                        'dislikes': 'integer',
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description='동일 리액션을 누를 시 이미 리액션을 눌렀습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '이미 리액션을 눌렀습니다.'
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description='해당하는 메타를 찾을 수 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 메타가 없습니다.'
+                    }
+                }
+            )
+        }
+    )
 
     def post(self, request):
         meta_id = request.data['id']
@@ -282,6 +545,60 @@ class ReactionView(APIView):
 # 리액션 삭제
 class DeleteReactionView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
+    @swagger_auto_schema(
+        operation_description='리액션 삭제, 쿼리파라미터 여러개로 조회 가능',
+        operation_summary='리액션 삭제',
+        operation_id='리액션_삭제',
+        tags=['리액션'],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description='메타 ID'
+            ),
+        },
+        required=['id'], 
+    ),
+        responses={
+            200: openapi.Response(
+                description='성공적으로 유저 리액션 정보를 조회했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'likes': 'integer', 
+                        'dislikes': 'integer',
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description='잘못된 접근 입니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '잘못된 접근 입니다.'
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description='해당하는 메타를 찾을 수 없습니다.',
+                examples={
+                    'application/json': [{'resultcode': 'FAIL','message': '해당하는 메타가 없습니다.'},
+                                        {'resultcode': 'FAIL','message': '리액션한 메타가 없습니다.'}
+                    ]
+                }
+            ),
+        }
+    )
 
     def delete(self, request):
         meta_id = request.data['id']
@@ -312,6 +629,51 @@ class DeleteReactionView(APIView):
 
 # 댓글 조회
 class CheckCommentView(APIView):
+    @swagger_auto_schema(
+        operation_description='댓글 조회',
+        operation_summary='댓글 조회',
+        operation_id='댓글_조회',
+        tags=['댓글'],
+        manual_parameters=[
+            openapi.Parameter(
+                'comment_id',
+                openapi.IN_QUERY,
+                description='조회할 댓글 ID',
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'meta_id',
+                openapi.IN_QUERY,
+                description='조회할 메타 ID',
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description='조회할 유저 ID',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 댓글 정보를 조회했습니다.',
+                schema=CommentSerializer
+            ),
+            404: openapi.Response(
+                description='해당 댓글 정보가 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 댓글이 없습니다.'
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         comment_id = request.query_params.get('comment_id')
         meta_id = request.query_params.get('meta_id')
@@ -338,6 +700,65 @@ class CheckCommentView(APIView):
 class WriteCommentView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
+    @swagger_auto_schema(
+        operation_description='댓글 작성',
+        operation_summary='댓글 작성',
+        operation_id='댓글_작성',
+        tags=['댓글'],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='작성할 메타 ID'),
+            'content': openapi.Schema(type=openapi.TYPE_STRING, description='작성할 댓글 내용'),
+        },
+        required=['id', 'content'],  
+        responses={
+            200: openapi.Response(
+                description='성공적으로 댓글을 작성 했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'message': '댓글 작성이 완료되었습니다.',
+                        'data': {
+                            'meta': 'string',
+                            'writer': 'string',
+                            'content': 'string',
+                            'created_at': 'date'
+                        }
+                    }
+                }
+            ),
+            400:openapi.Response(
+                description='잘못된 접근 입니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '잘못된 접근 입니다.'
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description='해당하는 메타가 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 메타가 없습니다.'
+                    }
+                }
+            )
+        }
+        )
+    )
+
     def post(self, request):
         meta_id = request.data['id']
         content = request.data['content']
@@ -351,7 +772,7 @@ class WriteCommentView(APIView):
         data = {'meta': lol_meta.title,
                 'writer': writer.nickname,
                 'content': content,
-                'created_at': timezone.now()}
+                'created_at': timezone.now(),}
 
         if lol_meta:
             Comment.objects.create(lol_meta=lol_meta, writer=writer, content=content)
@@ -363,6 +784,66 @@ class WriteCommentView(APIView):
 # 댓글 수정
 class UpdateCommentView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
+
+    @swagger_auto_schema(
+        operation_description='댓글 수정',
+        operation_summary='댓글 수정',
+        operation_id='댓글_수정',
+        tags=['댓글'],
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization',
+                openapi.IN_HEADER,
+                description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='수정할 댓글 ID'),
+            'content': openapi.Schema(type=openapi.TYPE_STRING, description='수정할 댓글 내용'),
+        },
+        required=['id', 'content'],  
+        responses={
+            200: openapi.Response(
+                description='성공적으로 댓글을 수정 했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'message': '댓글 수정이 완료되었습니다.',
+                        'data': {
+                            'meta': 'string',
+                            'writer': 'string',
+                            'content': 'string',
+                            'created_at': 'date'
+                        }
+                    }
+                }
+            ),
+            400:openapi.Response(
+                description='잘못된 접근 입니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '잘못된 접근 입니다.'
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description='해당하는 댓글이 없습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'FAIL',
+                        'message': '해당하는 댓글이 없습니다.'
+                    }
+                }
+            )
+        }
+        )
+    )
+
     def patch(self, request):
         user = request.user
         comment_id = request.data['id']
@@ -389,6 +870,60 @@ class UpdateCommentView(APIView):
 
 # 댓글 삭제
 class DeleteCommentView(APIView):
+    permission_classes = [IsAuthenticatedAndTokenVerified]
+    
+    @swagger_auto_schema(
+    operation_description='댓글 삭제',
+    operation_summary='댓글 삭제',
+    operation_id='댓글_삭제',
+    tags=['댓글'],
+    manual_parameters=[
+        openapi.Parameter(
+            'Authorization',
+            openapi.IN_HEADER,
+            description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
+            type=openapi.TYPE_STRING,
+            required=True
+        )
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='삭제할 댓글 ID')
+        },
+        required=['id'],  
+    ),
+    responses={
+        200: openapi.Response(
+            description='성공적으로 댓글을 삭제 했습니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'SUCCESS',
+                    'message': '댓글 삭제가 완료되었습니다.'
+                }
+            }
+        ),
+        400: openapi.Response(
+            description='잘못된 접근 입니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'FAIL',
+                    'message': '잘못된 접근 입니다.'
+                }
+            }
+        ),
+        404: openapi.Response(
+            description='해당하는 댓글이 없습니다.',
+            examples={
+                'application/json': {
+                    'resultcode': 'FAIL',
+                    'message': '해당하는 댓글이 없습니다.'
+                }
+            }
+        )
+    }
+)
+
     def delete(self,request):
         user = request.user
         comment_id = request.data['id']
