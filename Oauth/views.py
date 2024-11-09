@@ -75,15 +75,16 @@ class GoogleSigInView(APIView):
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
 
+            uri = config('GOOGLE_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}{nickname}{message}'
+
             if cache.get(user.email):
-                return Response({'resultcode': 'FAIL','message': '이미 로그인 되어있습니다.'},status=status.HTTP_400_BAD_REQUEST)
+                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
             
             cache.set(user.email, {'access': access_token})
 
-            uri = config('GOOGLE_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
-            message = f"&message={data['message']}" if 'message' in data else ""
-            redirect_url = f"{uri}{nickname}{message}"
             response = redirect(redirect_url)
             response.set_cookie(
                 key='access_token',
@@ -93,9 +94,7 @@ class GoogleSigInView(APIView):
 
             return response
         else:
-            return Response({'resultcode': 'FAIL',
-                            'message': '올바르지 않은 인증 코드입니다.', 
-                            'error': access_response.json()['error']}, status=access_response.status_code)
+            return redirect(f"{uri}?message=올바르지 않은 인증 코드입니다.&error={access_response.json()['error']}")
 
 
 # 카카오 로그인 url 발급
@@ -155,15 +154,17 @@ class KakaoSigninView(APIView):
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
 
+            uri = config('KAKAO_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}{nickname}{message}'
+
             if cache.get(user.email):
-                return Response({'resultcode': 'FAIL','message': '이미 로그인 되어있습니다.'},status=status.HTTP_400_BAD_REQUEST)
+                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
+
             
             cache.set(user.email, {'access': access_token})
 
-            uri = config('KAKAO_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
-            message = f"&message={data['message']}" if 'message' in data else ""
-            redirect_url = f"{uri}{nickname}{message}"
             response = redirect(redirect_url)
             response.set_cookie(
                 key='access_token',
@@ -173,9 +174,8 @@ class KakaoSigninView(APIView):
 
             return response
         else:
-            return Response({'resultcode': 'FAIL',
-                            'message': '올바르지 않은 인증 코드입니다.', 
-                            'error': access_response.json()['error']}, status=access_response.status_code)
+            return redirect(f"{uri}?message=올바르지 않은 인증 코드입니다.&error={access_response.json()['error']}")
+
 
 
 # 네이버 로그인 url 발급
@@ -234,15 +234,16 @@ class NaverSigninView(APIView):
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
 
+            uri = config('KAKAO_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}{nickname}{message}'
+
             if cache.get(user.email):
-                return Response({'resultcode': 'FAIL','message': '이미 로그인 되어있습니다.'},status=status.HTTP_400_BAD_REQUEST)
+                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
             
             cache.set(user.email, {'access': access_token})
 
-            uri = config('NAVER_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
-            message = f"&message={data['message']}" if 'message' in data else ""
-            redirect_url = f"{uri}{nickname}{message}"
             response = redirect(redirect_url)
             response.set_cookie(
                 key='access_token',
@@ -252,6 +253,4 @@ class NaverSigninView(APIView):
 
             return response
         else:
-            return Response({'resultcode': 'FAIL',
-                            'message': '올바르지 않은 인증 코드입니다.', 
-                            'error': access_response.json()['error']}, status=access_response.status_code)
+            return redirect(f"{uri}?message=올바르지 않은 인증 코드입니다.&error={access_response.json()['error']}")
