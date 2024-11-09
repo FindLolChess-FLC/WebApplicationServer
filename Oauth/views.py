@@ -27,21 +27,22 @@ class GoogleSignInUrlView(APIView):
         response_type = config('GOOGLE_RESPONSE_TYPE')
 
         google_login_url = (
-            f'https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&response_type={response_type}'
+            f'https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&response_type={response_type}&scope={scope}'
         )
         
-        return redirect(google_login_url)
+        return Response({'resultcode': 'SUCCESS', 'login_url': google_login_url}, status=status.HTTP_200_OK)
 
 
 # 구글 로그인후 JWT 발급
 class GoogleSigInView(APIView):
-    def post(self, request):
-        auth_code = urllib.parse.unquote(request.data.get('code'))
+    def get(self, request):
+        auth_code = urllib.parse.unquote(request.query_params.get('code'))
+
         data = {
             'code': auth_code,
             'client_id': config('GOOGLE_KEY'),
             'client_secret': config('GOOGLE_SECRET'),
-            'redirect_uri': config('GOOGLE_REDIRECT_URI2'),
+            'redirect_uri': config('GOOGLE_REDIRECT_URI'),
             'grant_type': config('GOOGLE_GRANT_TYPE'),
         }
 
@@ -55,7 +56,7 @@ class GoogleSigInView(APIView):
             email = user_response.get('email')
             nickname = user_response.get('name')
 
-            data = {'email':email, 'access':access_token}
+            data = {'email': email, 'access': access_token}
 
             try:
                 user = User.objects.get(email=email)
@@ -79,7 +80,18 @@ class GoogleSigInView(APIView):
             
             cache.set(user.email, {'access': access_token})
 
-            return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+            uri = config('GOOGLE_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
+            message = f"&message={data['message']}" if 'message' in data else ""
+            redirect_url = f"{uri}{nickname}{message}"
+            response = redirect(redirect_url)
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=False,
+            )
+
+            return response
         else:
             return Response({'resultcode': 'FAIL',
                             'message': '올바르지 않은 인증 코드입니다.', 
@@ -94,23 +106,24 @@ class KakaoSinginUrlView(APIView):
         response_type = config('KAKAO_RESPONSE_TYPE')
 
         kakao_login_url = f'https://kauth.kakao.com/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type={response_type}'
-        return redirect(kakao_login_url)
+        return Response({'resultcode': 'SUCCESS', 'login_url': kakao_login_url}, status=status.HTTP_200_OK)
     
 
 # 카카오 로그인 후 JWT 발급
 class KakaoSigninView(APIView):
-    def post(self, request):
-        auth_code = urllib.parse.unquote(request.data.get('code'))
+    def get(self, request):
+        auth_code = request.query_params.get('code')
+
         data = {
             'code': auth_code,
             'client_id': config('KAKAO_KEY'),
             'client_secret': config('KAKAO_SECRET'),
-            'redirect_uri': config('KAKAO_REDIRECT_URI2'),
+            'redirect_uri': config('KAKAO_REDIRECT_URI'),
             'grant_type': config('KAKAO_GRANT_TYPE'),
         }
 
         access_response = requests.post('https://kauth.kakao.com/oauth/token', data=data)
-        
+
         if access_response.status_code == 200:
             token_info = access_response.json()
             access_token = token_info.get('access_token')
@@ -147,7 +160,18 @@ class KakaoSigninView(APIView):
             
             cache.set(user.email, {'access': access_token})
 
-            return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+            uri = config('KAKAO_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
+            message = f"&message={data['message']}" if 'message' in data else ""
+            redirect_url = f"{uri}{nickname}{message}"
+            response = redirect(redirect_url)
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=False,
+            )
+
+            return response
         else:
             return Response({'resultcode': 'FAIL',
                             'message': '올바르지 않은 인증 코드입니다.', 
@@ -164,14 +188,15 @@ class NaverSinginUrlView(APIView):
 
         naver_login_url = f'https://nid.naver.com/oauth2.0/authorize?response_type={response_type}&client_id={client_id}&state={state}&redirect_uri={redirect_uri}'
         
-        return redirect(naver_login_url)
+        return Response({'resultcode': 'SUCCESS', 'login_url': naver_login_url}, status=status.HTTP_200_OK)
     
 
 # 네이버 로그인 후 JWT 발급
 class NaverSigninView(APIView):
-    def post(self, request):
-        auth_code = urllib.parse.unquote(request.data.get('code'))
-        state = urllib.parse.unquote(request.data.get('state'))
+    def get(self, request):
+        auth_code = urllib.parse.unquote(request.query_params.get('code'))
+        state = urllib.parse.unquote(request.query_params.get('state'))
+
         data = {
             'code': auth_code,
             'client_id': config('NAVER_KEY'),
@@ -214,8 +239,18 @@ class NaverSigninView(APIView):
             
             cache.set(user.email, {'access': access_token})
 
+            uri = config('NAVER_REDIRECT_URI2')
+            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ""
+            message = f"&message={data['message']}" if 'message' in data else ""
+            redirect_url = f"{uri}{nickname}{message}"
+            response = redirect(redirect_url)
+            response.set_cookie(
+                key='access_token',
+                value=access_token,
+                httponly=False,
+            )
 
-            return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+            return response
         else:
             return Response({'resultcode': 'FAIL',
                             'message': '올바르지 않은 인증 코드입니다.', 
