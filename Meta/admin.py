@@ -10,7 +10,7 @@ class LolMetaChampionInline(admin.TabularInline):
 
 class LolMetaAdmin(admin.ModelAdmin):
     inlines = [LolMetaChampionInline]  
-    list_display = ('title', 'win_rate', 'like_count', 'dislike_count')
+    list_display = ('title', 'like_count', 'dislike_count')
 
 
 admin.site.register(Synergy)

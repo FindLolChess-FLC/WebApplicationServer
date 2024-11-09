@@ -101,7 +101,7 @@ def lolchess_crawling():
         }
     
     for data in meta_data:
-        meta, craeted = LolMeta.objects.get_or_create(title = data, win_rate = 0)
+        meta, craeted = LolMeta.objects.get_or_create(title = data)
         
         meta_augments = meta_data[data]['증강']
         if len(meta_augments) > 1:
