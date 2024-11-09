@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.core.mail import EmailMessage
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from .serializer import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer, FavoriteSerializer
+from .serializers import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer, FavoriteSerializer
 from .models import User
 from Meta.models import LolMeta
 from .permission import IsAuthenticatedAndTokenVerified
@@ -571,7 +571,7 @@ class DeleteIdView(APIView):
     operation_summary='회원 탈퇴',
     operation_id='회원_탈퇴',
     tags=['유저'],
-    mmanual_parameters=[
+    manual_parameters=[
             openapi.Parameter(
                 'Authorization',
                 openapi.IN_HEADER,
@@ -625,7 +625,7 @@ class CheckFavoriteView(APIView):
     operation_summary='즐겨찾기 조회',
     operation_id='즐겨찾기_조회',
     tags=['즐겨찾기'],
-    mmanual_parameters=[
+    manual_parameters=[
             openapi.Parameter(
                 'Authorization',
                 openapi.IN_HEADER,
@@ -636,7 +636,7 @@ class CheckFavoriteView(APIView):
         ],
     responses={
         200: openapi.Response(
-            description='회원 탈퇴에 성공했습니다.',
+            description='즐겨찾기 조회에 성공했습니다.',
             schema=FavoriteSerializer,
         ),
         404: openapi.Response(
@@ -670,11 +670,11 @@ class FavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
     @swagger_auto_schema(
-    operation_description='즐겨찾기',
-    operation_summary='즐겨찾기',
-    operation_id='즐겨찾기',
+    operation_description='즐겨찾기 하기',
+    operation_summary='즐겨찾기 하기',
+    operation_id='즐겨찾기_하기',
     tags=['즐겨찾기'],
-    mmanual_parameters=[
+    manual_parameters=[
             openapi.Parameter(
                 'Authorization',
                 openapi.IN_HEADER,
@@ -746,11 +746,11 @@ class DeleteFavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]
 
     @swagger_auto_schema(
-    operation_description='즐겨찾기',
-    operation_summary='즐겨찾기',
-    operation_id='즐겨찾기',
+    operation_description='즐겨찾기 삭제',
+    operation_summary='즐겨찾기 삭제',
+    operation_id='즐겨찾기_삭제',
     tags=['즐겨찾기'],
-    mmanual_parameters=[
+    manual_parameters=[
             openapi.Parameter(
                 'Authorization',
                 openapi.IN_HEADER,
@@ -777,11 +777,11 @@ class DeleteFavoriteView(APIView):
             }
         ),
         400: openapi.Response(
-            description='이미 즐겨찾기 된 메타입니다.',
+            description='이미 삭제된 메타입니다.',
             examples={
                 'application/json': {
                     'resultcode': 'FAIL',
-                    'message': '이미 즐겨찾기 된 메타입니다.'
+                    'message': '이미 삭제된 메타입니다.'
                 }
             }
         ),
