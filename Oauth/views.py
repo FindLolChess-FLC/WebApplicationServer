@@ -3,11 +3,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import redirect
 from django.core.cache import cache
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from decouple import config
-import requests
-import urllib.parse
 from User.models import User
 from User.serializer import SignInSerializer
+import requests
+import urllib.parse
 import random
 import uuid
 
@@ -20,6 +22,24 @@ def generate_unique_nickname(nickname):
 
 # 구글 로그인 url 발급
 class GoogleSignInUrlView(APIView):
+    @swagger_auto_schema(
+        operation_description='구글 로그인',
+        operation_summary='구글 로그인',
+        operation_id='구글_로그인',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 구글 로그인 URL을 조회했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'login_url': 'string'
+                    }
+                },
+            ),
+        }
+    )
+
     def get(self, request):
         client_id = config('GOOGLE_KEY')
         redirect_uri = config('GOOGLE_REDIRECT_URI')
@@ -35,8 +55,26 @@ class GoogleSignInUrlView(APIView):
 
 # 구글 로그인후 JWT 발급
 class GoogleSigInView(APIView):
+    @swagger_auto_schema(
+        operation_description='구글 콜백',
+        operation_summary='구글 콜백',
+        operation_id='구글_콜백',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+            description='성공적으로 요청을 처리했습니다.'
+            ),
+            302: openapi.Response(
+                description='구글 로그인 성공 또는 실패 시 리다이렉트됩니다.',
+                examples={
+                    'text/html': '리다이렉트 URL로 이동합니다.'
+                },
+            ),
+        }
+    )
+
     def get(self, request):
-        auth_code = urllib.parse.unquote(request.query_params.get('code'))
+        auth_code = request.query_params.get('code')
 
         data = {
             'code': auth_code,
@@ -99,6 +137,24 @@ class GoogleSigInView(APIView):
 
 # 카카오 로그인 url 발급
 class KakaoSinginUrlView(APIView):
+    @swagger_auto_schema(
+        operation_description='카카오 로그인',
+        operation_summary='카카오 로그인',
+        operation_id='카카오_로그인',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 카카오 로그인 URL을 조회했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'login_url': 'string'
+                    }
+                },
+            ),
+        }
+    )
+
     def get(self, request):
         client_id = config('KAKAO_KEY')
         redirect_uri = config('KAKAO_REDIRECT_URI')
@@ -110,6 +166,24 @@ class KakaoSinginUrlView(APIView):
 
 # 카카오 로그인 후 JWT 발급
 class KakaoSigninView(APIView):
+    @swagger_auto_schema(
+        operation_description='카카오 콜백',
+        operation_summary='카카오 콜백',
+        operation_id='카카오_콜백',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+            description='성공적으로 요청을 처리했습니다.'
+            ),
+            302: openapi.Response(
+                description='카카오 로그인 성공 또는 실패 시 리다이렉트됩니다.',
+                examples={
+                    'text/html': '리다이렉트 URL로 이동합니다.'
+                },
+            ),
+        }
+    )
+
     def get(self, request):
         auth_code = request.query_params.get('code')
 
@@ -180,6 +254,24 @@ class KakaoSigninView(APIView):
 
 # 네이버 로그인 url 발급
 class NaverSinginUrlView(APIView):
+    @swagger_auto_schema(
+        operation_description='네이버 로그인',
+        operation_summary='네이버 로그인',
+        operation_id='네이버_로그인',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 네이버 로그인 URL을 조회했습니다.',
+                examples={
+                    'application/json': {
+                        'resultcode': 'SUCCESS',
+                        'login_url': 'string'
+                    }
+                },
+            ),
+        }
+    )
+
     def get(self, request):
         client_id = config('NAVER_KEY')
         redirect_uri = config('NAVER_REDIRECT_URI')
@@ -193,6 +285,24 @@ class NaverSinginUrlView(APIView):
 
 # 네이버 로그인 후 JWT 발급
 class NaverSigninView(APIView):
+    @swagger_auto_schema(
+        operation_description='네이버 콜백',
+        operation_summary='네이버 콜백',
+        operation_id='네이버_콜백',
+        tags=['소셜 로그인'],
+        responses={
+            200: openapi.Response(
+            description='성공적으로 요청을 처리했습니다.'
+            ),
+            302: openapi.Response(
+                description='네이버 로그인 성공 또는 실패 시 리다이렉트됩니다.',
+                examples={
+                    'text/html': '리다이렉트 URL로 이동합니다.'
+                },
+            ),
+        }
+    )
+
     def get(self, request):
         auth_code = urllib.parse.unquote(request.query_params.get('code'))
         state = urllib.parse.unquote(request.query_params.get('state'))
