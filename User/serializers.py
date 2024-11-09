@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from .models import User
-from Meta.serializer import LolMetaSerializer
+from Meta.serializers import LolMetaSerializer
 
 # 회원가입
 class SignUpSerializer(serializers.ModelSerializer):

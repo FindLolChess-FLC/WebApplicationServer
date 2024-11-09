@@ -7,7 +7,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from decouple import config
 from User.models import User
-from User.serializer import SignInSerializer
+from User.serializers import SignInSerializer
 import requests
 import urllib.parse
 import random
