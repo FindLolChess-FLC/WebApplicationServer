@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 
     'corsheaders',
+    'drf_yasg',
 
     'User',
     'Crawling',
@@ -166,6 +167,7 @@ AUTH_USER_MODEL = 'User.User'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES' : [
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

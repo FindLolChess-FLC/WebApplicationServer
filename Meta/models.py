@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Synergy(models.Model):
@@ -58,7 +59,7 @@ class ItemImg(models.Model):
 
 class Champion(models.Model):
     name = models.CharField(max_length=255)
-    price = models.IntegerField() 
+    price = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)]) 
     synergy = models.ManyToManyField(Synergy)
 
     def __str__(self):

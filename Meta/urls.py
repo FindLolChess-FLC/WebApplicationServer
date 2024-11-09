@@ -9,7 +9,7 @@ urlpatterns = [
     path('augmentersearch/', AugmenterSearchView.as_view()), # 증강체 
     path('checkreaction/', CheckReactionView.as_view()), # 리액션 조회
     path('reaction/', ReactionView.as_view()), # 리액션 달기
-    path('delreaction/', DeleteReactionView.as_view()), # 리액션 
+    path('deletereaction/', DeleteReactionView.as_view()), # 리액션 
     path('checkcomment/', CheckCommentView.as_view()), # 댓글 조회
     path('writecomment/', WriteCommentView.as_view()), # 댓글 작성
     path('updatecomment/', UpdateCommentView.as_view()), # 댓글 수정
