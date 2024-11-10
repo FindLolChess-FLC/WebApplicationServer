@@ -5,9 +5,10 @@ from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter
 from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
 from django.db.models import Q
 from django.utils import timezone
-from User.permission import IsAuthenticatedAndTokenVerified
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from User.permission import IsAuthenticatedAndTokenVerified
+from .schema import lol_meta_schema
 import re
 
 # 챔피언 조회
@@ -237,7 +238,7 @@ class MetaSearchView(APIView):
         responses={
             200: openapi.Response(
                 description='성공적으로 메타 정보를 조회했습니다.',
-                schema=LolMetaSerializer,
+                schema=lol_meta_schema,
             ),
         }
     )
@@ -292,7 +293,7 @@ class MetaSearchView(APIView):
         responses={
             200: openapi.Response(
                 description='성공적으로 메타 정보를 조회했습니다.',
-                schema=LolMetaSerializer,
+                schema=lol_meta_schema,
             ),
             404: openapi.Response(
                 description='해당 메타 정보를 찾을 수 없습니다.',
