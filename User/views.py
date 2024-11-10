@@ -483,19 +483,23 @@ class EmailVerification(APIView):
                     </head>
                     <body>
                         <h1 style="color: #4386f0; border-bottom: 1px solid black; margin: 0 0 20px 0">FLC</h1>
-                        <div style="background-color: #f0f0f0; padding: 5px;">
-                                <div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                                    <h2 style="color: #4386f0; margin: 0;">FLC 이메일 인증 안내</h2>
-                                    <div style="background-color: #ffffff; width: 355px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 25px 0 25px 0; gap: 5px;">
-                                        <p style="margin: 20px 0 0 0;">로그인 승인 코드입니다.</p>
-                                        <strong style="letter-spacing: 5px; margin: 0 0 20px 0;">{code}</strong>
-                                    </div>
-                                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; ">
-                                            <p style="margin: 0;">FLC_FindLolChess에서 이메일 주소 인증을 요청하셨습니다.</p>
-                                            <p style="margin: 0;">아래의 인증코드를 입력하여 인증을 완료해주세요.</p>
-                                        </div>
-                            </div>
-                        </div>
+                        <table style="width: 100%; background-color: #f0f0f0; padding: 5px;">
+                        <tr>
+                            <td align="center">
+                                <h2 style="color: #4386f0; margin: 0;">FLC 이메일 인증 안내</h2>
+                                <table style="background-color: #ffffff; width: 355px; margin: 25px 0; padding: 20px;">
+                                    <tr>
+                                        <td align="center">
+                                            <p style="margin: 0 0 10px 0;">로그인 승인 코드입니다.</p>
+                                            <strong style="letter-spacing: 5px; margin: 20px 0;">{code}</strong>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p style="margin: 0;">FLC_FindLolChess에서 이메일 주소 인증을 요청하셨습니다.</p>
+                                <p style="margin: 0;">아래의 인증코드를 입력하여 인증을 완료해주세요.</p>
+                            </td>
+                        </tr>
+                    </table>
                     </body>
                     </html>
                     """
