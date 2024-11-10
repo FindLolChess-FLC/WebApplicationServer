@@ -122,7 +122,7 @@ class GoogleSigInView(APIView):
 
             response = redirect(redirect_url)
             response.set_cookie(
-                key='access_token',
+                key='token',
                 value=access_token,
                 httponly=False,
             )
@@ -234,7 +234,7 @@ class KakaoSigninView(APIView):
 
             response = redirect(redirect_url)
             response.set_cookie(
-                key='access_token',
+                key='token',
                 value=access_token,
                 httponly=False,
             )
@@ -346,7 +346,7 @@ class NaverSigninView(APIView):
 
             response = redirect(redirect_url)
             response.set_cookie(
-                key='access_token',
+                key='token',
                 value=access_token,
                 httponly=False,
             )
