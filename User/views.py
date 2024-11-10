@@ -91,11 +91,9 @@ class SignInView(TokenObtainPairView):
             }
         ),
         400: openapi.Response(
-            description='이미 로그인된 유저입니다.',
+            description='로그인에 실패 했습니다.',
             examples={
-                'application/json': [{'resultcode': 'FAIL','message': '이미 로그인된 유저입니다.'},
-                                    {'resultcode': 'FAIL','message': '로그인에 실패 했습니다.', 'error': 'string'}
-                                    ]
+                'application/json':{'resultcode': 'FAIL','message': '로그인에 실패 했습니다.', 'error': 'string'}
             }
         ),
     }
@@ -107,12 +105,9 @@ class SignInView(TokenObtainPairView):
             data = serializer.validated_data
             user = authenticate(email=request.data['email'], password=request.data['password'])
 
-            if cache.get(user) == None:
-                cache.set(user, {'access': data['access']})
-                return Response({'resultcode': 'SUCCESS',
-                                'access': data['access']}, status=status.HTTP_200_OK)
-            
-            return Response({'resultcode': 'FAIL', 'message': '이미 로그인된 유저입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            cache.set(user, {'access': data['access']})
+            return Response({'resultcode': 'SUCCESS',
+                            'access': data['access']}, status=status.HTTP_200_OK)
         
         return Response({'resultcode': 'FAIL', 
                         'message': '로그인에 실패 했습니다.', 

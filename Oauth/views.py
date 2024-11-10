@@ -117,9 +117,6 @@ class GoogleSigInView(APIView):
             nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
             message = f"&message={data['message']}" if 'message' in data else ''
             redirect_url = f'{uri}{nickname}{message}'
-
-            if cache.get(user.email):
-                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
             
             cache.set(user.email, {'access': access_token})
 
@@ -233,10 +230,6 @@ class KakaoSigninView(APIView):
             message = f"&message={data['message']}" if 'message' in data else ''
             redirect_url = f'{uri}{nickname}{message}'
 
-            if cache.get(user.email):
-                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
-
-            
             cache.set(user.email, {'access': access_token})
 
             response = redirect(redirect_url)
@@ -348,9 +341,6 @@ class NaverSigninView(APIView):
             nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
             message = f"&message={data['message']}" if 'message' in data else ''
             redirect_url = f'{uri}{nickname}{message}'
-
-            if cache.get(user.email):
-                return redirect(f"{uri}?message=이미 로그인 되어있습니다.")
             
             cache.set(user.email, {'access': access_token})
 
