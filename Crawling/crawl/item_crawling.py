@@ -86,7 +86,7 @@ def item_crawling():
     comb_act = ActionChains(driver)
 
     for comb_item in comb_item_data:
-        driver.execute_script("arguments[0].scrollIntoView();", comb_act)
+        driver.execute_script("arguments[0].scrollIntoView();", comb_item)
         comb_act.move_to_element(comb_item).click().perform()
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
 
