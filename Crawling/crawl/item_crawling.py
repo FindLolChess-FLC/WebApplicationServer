@@ -11,25 +11,26 @@ from Meta.models import Item, ItemImg
 
 # 조합 아이템 번역
 def item_translation(data):
-    if data == 'BFSword':
+    data = data.lower()
+    if data == 'bfsword':
         return 'B.F.대검'
-    elif data == 'RecurveBow':
+    elif data == 'recurvebow':
         return '곡궁'
-    elif data == 'ChainVest':
+    elif data == 'chainvest':
         return '쇠사슬 조끼'
-    elif data == 'NegatronCloak':
+    elif data == 'negatroncloak':
         return '음전자 망토'
-    elif data == 'NeedlesslyLargeRod':
+    elif data == 'needlesslylargerod':
         return '쓸데없이 큰 지팡이'
-    elif data == 'Tearofthegoddess':
+    elif data == 'tearofthegoddess':
         return '여신의 눈물'
-    elif data == 'GiantsBelt':
+    elif data == 'giantsbelt':
         return '거인의 허리띠'
-    elif data == 'SparringGloves':
+    elif data == 'sparringgloves':
         return '연습용 장갑'
-    elif data == 'Spatula':
+    elif data == 'spatula':
         return '뒤집개'
-    elif data == 'FryingPan':
+    elif data == 'fryingpan':
         return '프라이팬'
 
 # 아이템 데이터 크롤링
