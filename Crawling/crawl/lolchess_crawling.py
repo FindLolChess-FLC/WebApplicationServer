@@ -34,8 +34,8 @@ def lolchess_crawling():
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
-    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t6 > div.link-wrapper > a')
-
+    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t7 > div.link-wrapper > a')
+    print(crawl_meta_link)
     meta_link = [link.get_attribute('href') for link in crawl_meta_link]
     meta_title = []
     meta_champ = []
@@ -55,7 +55,7 @@ def lolchess_crawling():
     # 각 링크에 대한 상세 정보 크롤링
     for link in meta_link:
         driver.get(link)
-        driver.implicitly_wait(1)
+        driver.implicitly_wait(10)
 
         detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-lmthfr.e1mgaavq0 > div')
         detail_meta_champ = []
@@ -85,7 +85,7 @@ def lolchess_crawling():
             if len(champ.text) > 0:
                 # 이미지의 src에서 아이템 추출
                 detail_champ_item[champ.text.replace(' ', '')] = [
-                    re.findall(r'(?:items|item)/([^/_.]+)', i.get_attribute('src')) 
+                    re.findall(r'(?<=Item_)(.*?)(?=\.png)', i.get_attribute('src')) 
                     for i in champ.find_elements(By.TAG_NAME, 'img') if i.get_attribute('src')
                 ]
                 detail_champ_star[champ.text.replace(' ', '')] = sum(len(star.find_elements(By.TAG_NAME, 'div')) for star in champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div'))

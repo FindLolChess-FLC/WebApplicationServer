@@ -90,7 +90,7 @@ def item_crawling():
         comb_act.move_to_element(comb_item).click().perform()
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
 
-        name = ''.join(re.findall(r'(?:items|item)/([^/_.]+)', comb_item.find_element(By.TAG_NAME, 'img').get_attribute('src')))
+        name = ''.join(re.findall(r'(?<=Item_)(.*?)(?=\.png)', comb_item.find_element(By.TAG_NAME, 'img').get_attribute('src')))
         kor_name = act_data.find_element(By.TAG_NAME, 'strong').text
         effect = act_data.find_element(By.TAG_NAME, 'p').text
         
