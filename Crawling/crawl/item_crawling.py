@@ -3,6 +3,8 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 import re
 import itertools
 from Meta.models import Item, ItemImg
@@ -33,7 +35,13 @@ def item_translation(data):
 # 아이템 데이터 크롤링
 def item_crawling():
     url = 'https://lolchess.gg/meta/items?type=all'
-    driver = webdriver.Chrome()
+
+    service = Service('/usr/local/bin/geckodriver')
+    options = Options()
+    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+    options.add_argument("--headless")
+    options.binary_location = '/usr/bin/firefox'
+    driver = webdriver.Firefox(service=service, options=options)
 
     driver.get(url)
     driver.implicitly_wait(10)
@@ -51,7 +59,8 @@ def item_crawling():
     act = ActionChains(driver)
 
     for act_num in range(len(effect_data)):
-        act.move_to_element(effect_data[act_num]).perform()
+        driver.execute_script("arguments[0].scrollIntoView();", effect_data[act_num])
+        act.move_to_element(effect_data[act_num]).click().perform()
         
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
         all_item[act_num].append(act_data.find_element(By.TAG_NAME,'strong').text)
@@ -76,7 +85,8 @@ def item_crawling():
     comb_act = ActionChains(driver)
 
     for comb_item in comb_item_data:
-        comb_act.move_to_element(comb_item).perform()
+        driver.execute_script("arguments[0].scrollIntoView();", comb_act)
+        comb_act.move_to_element(comb_item).click().perform()
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
 
         name = ''.join(re.findall(r'(?:items|item)/([^/_.]+)', comb_item.find_element(By.TAG_NAME, 'img').get_attribute('src')))

@@ -1,11 +1,19 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 from Meta.models import Augmenter, AugmenterImg
 
 def augmenter_crawling():
     for tier in range(1,4):
         url = f'https://lolchess.gg/guide/augments/set12?tier={tier}'
-        driver = webdriver.Chrome()
+        
+        service = Service('/usr/local/bin/geckodriver')
+        options = Options()
+        options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+        options.add_argument("--headless")
+        options.binary_location = '/usr/bin/firefox'
+        driver = webdriver.Firefox(service=service, options=options)
 
         driver.get(url)
         driver.implicitly_wait(10)

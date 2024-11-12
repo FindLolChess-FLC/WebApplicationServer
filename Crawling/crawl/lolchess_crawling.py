@@ -3,6 +3,8 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 import re
 from Meta.models import * 
 
@@ -19,14 +21,20 @@ def reroll_lv(level):
 # lolchess.gg 크롤링
 def lolchess_crawling():
     url = 'https://lolchess.gg/meta'
-    driver = webdriver.Chrome()
+    
+    service = Service('/usr/local/bin/geckodriver')
+    options = Options()
+    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+    options.add_argument("--headless")
+    options.binary_location = '/usr/bin/firefox'
+    driver = webdriver.Firefox(service=service, options=options)
 
     driver.get(url)
-    driver.implicitly_wait(30)
+    driver.implicitly_wait(10)
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
-    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t7 > div.link-wrapper > a')
+    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t6 > div.link-wrapper > a')
 
     meta_link = [link.get_attribute('href') for link in crawl_meta_link]
     meta_title = []

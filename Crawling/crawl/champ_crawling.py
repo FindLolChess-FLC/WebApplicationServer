@@ -1,12 +1,20 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 from Meta.models import Champion, Synergy, ChampionImg
 from django.db import transaction
 
 # 챔피언 정보 저장
 def champion_crawling():
     url = 'https://tft.op.gg/meta-trends/champion'
-    driver = webdriver.Chrome()
+
+    service = Service('/usr/local/bin/geckodriver')
+    options = Options()
+    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+    options.add_argument("--headless")
+    options.binary_location = '/usr/bin/firefox'
+    driver = webdriver.Firefox(service=service, options=options)
 
     driver.get(url)
     driver.implicitly_wait(10)
