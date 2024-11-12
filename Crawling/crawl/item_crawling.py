@@ -45,7 +45,7 @@ def item_crawling():
     all_item = []
     
     for data in item_data:
-        item = list(itertools.chain(*[re.findall(r'(?:items|item)/([^/_.]+)', img.get_attribute('src')) for img in data]))
+        item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) for img in data]))
         all_item.append(item)
 
     act = ActionChains(driver)
