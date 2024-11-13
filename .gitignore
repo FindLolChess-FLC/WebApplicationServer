@@ -269,3 +269,5 @@ pyrightconfig.json
 tft
 
 .config
+
+migrations/
