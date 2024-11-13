@@ -337,7 +337,7 @@ class NaverSigninView(APIView):
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
 
-            uri = config('KAKAO_REDIRECT_URI2')
+            uri = config('NAVER_REDIRECT_URI2')
             nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
             message = f"&message={data['message']}" if 'message' in data else ''
             redirect_url = f'{uri}{nickname}{message}'
