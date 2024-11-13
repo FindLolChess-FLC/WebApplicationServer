@@ -267,3 +267,6 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python,django
 
 tft
+.config/nginx/flc.conf
+.config/uwsgi/flc.ini
+.config/uwsgi/uwsgi.service
