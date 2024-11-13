@@ -28,7 +28,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [config('SERVER'), config('SERVER_IP')]
 
 CORS_ALLOWED_ORIGINS  = [
     config('REACT_SERVER_IP'),
