@@ -77,7 +77,7 @@ def lolchess_crawling():
             if len(champ.text) > 0:
                 # 이미지의 src에서 아이템 추출
                 detail_champ_item[champ.text.replace(' ', '')] = [
-                    re.findall(r'(?:items|item)/([^/_.]+)', i.get_attribute('src')) 
+                    re.findall(r'(?<=Item_)(.*?)(?=\.png)', i.get_attribute('src')) 
                     for i in champ.find_elements(By.TAG_NAME, 'img') if i.get_attribute('src')
                 ]
                 detail_champ_star[champ.text.replace(' ', '')] = sum(len(star.find_elements(By.TAG_NAME, 'div')) for star in champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div'))

@@ -37,13 +37,13 @@ class AugmenterImg(models.Model):
 
 
 class Item(models.Model):
-    name = models.CharField(max_length=25)
-    kor_name = models.CharField(max_length=25)
+    name = models.CharField(max_length=50)
+    kor_name = models.CharField(max_length=50)
     effect = models.CharField(max_length=500)
-    item1 = models.CharField(max_length=25)
-    kor_item1 = models.CharField(max_length=25)
-    item2 = models.CharField(max_length=25)
-    kor_item2 = models.CharField(max_length=25)
+    item1 = models.CharField(max_length=50)
+    kor_item1 = models.CharField(max_length=50)
+    item2 = models.CharField(max_length=50)
+    kor_item2 = models.CharField(max_length=50)
 
     def __str__(self):
         return self.kor_name
