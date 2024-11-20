@@ -15,7 +15,7 @@ def item_translation(data):
         return '음전자 망토'
     elif data == 'NeedlesslyLargeRod':
         return '쓸데없이 큰 지팡이'
-    elif data == 'Tearofthegoddess':
+    elif data == 'TearOfTheGoddess':
         return '여신의 눈물'
     elif data == 'GiantsBelt':
         return '거인의 허리띠'
@@ -47,14 +47,14 @@ def save_item():
         img = item.find_element(By.CSS_SELECTOR, 'div > div.relative.overflow-hidden > img').get_attribute('src')
         save_item_img(name, img)
     
-    comb_url = 'https://lolchess.gg/items/set12'
+    comb_url = 'https://lolchess.gg/items/set13'
     driver.get(comb_url)
     driver.implicitly_wait(10)
     
     comb_item_data = driver.find_elements(By.CSS_SELECTOR, 'button > div > img')
 
     for comb_item in comb_item_data:
-        name = item_translation(re.findall(r'(?:items|item)/([^/_.]+)', comb_item.get_attribute('src'))[0])
+        name = item_translation(re.findall(r'(?<=Item_)(.*?)(?=\.png)', comb_item.get_attribute('src'))[0])
         img = comb_item.get_attribute('src')
         save_item_img(name, img)
 

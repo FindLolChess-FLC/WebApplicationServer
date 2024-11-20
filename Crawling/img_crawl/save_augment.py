@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import requests
 import os
+import re
 
 def save_augment_img(tier, name, img):
     if tier == 1:
@@ -10,14 +11,15 @@ def save_augment_img(tier, name, img):
         save_directory = 'tft\증강\골드'
     elif tier == 3:
         save_directory = 'tft\증강\프리즘'
-    file_path = os.path.join(save_directory, f"{name.text.replace(' ', '')}.png")
+    file_name = re.sub(r'[\\/*?:"<>|]', "", name.text.replace(" ", ""))
+    file_path = os.path.join(save_directory, f"{file_name}.png")
     response = requests.get(img)
     with open(file_path, "wb") as file:
         file.write(response.content)
 
 def save_augment():
     for tier in range(1,4):
-        url = f'https://lolchess.gg/guide/augments/set12?tier={tier}'
+        url = f'https://lolchess.gg/guide/augments/set13?tier={tier}'
         driver = webdriver.Chrome()
 
         driver.get(url)
