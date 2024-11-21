@@ -54,7 +54,16 @@ def item_crawling():
     all_item = []
     
     for data in item_data:
-        item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) for img in data]))
+        item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) 
+                                    if 'items' not in img.get_attribute('src') 
+                                    else re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src'))
+                                    for img in data]))
+        print(item)
+        if len(item) < 1:
+            item = list(itertools.chain(*[re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src')) for img in data]))
+            all_item.append(item)
+            continue
+
         all_item.append(item)
 
     act = ActionChains(driver)
@@ -78,7 +87,7 @@ def item_crawling():
             item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
             ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
 
-    comb_url = 'https://lolchess.gg/items/set12'
+    comb_url = 'https://lolchess.gg/items/set13'
     driver.get(comb_url)
     driver.implicitly_wait(10)
 

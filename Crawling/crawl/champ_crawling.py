@@ -25,17 +25,9 @@ def champion_crawling():
 
     for name, synergy, price in zip(champ_name_data, champ_synergy_data, champ_price_data):
         with transaction.atomic():
-            if name.text.replace(' ', '')  == '노라와유미':
-                nora_champion_instance, created = Champion.objects.get_or_create(name='노라', price=price.text[1])
-                ChampionImg.objects.get_or_create(champion=nora_champion_instance, img_src='https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/챔피언/노라.png')
-                yuumi_champion_instance, created = Champion.objects.get_or_create(name='유미', price=1)
-                ChampionImg.objects.get_or_create(champion=yuumi_champion_instance, img_src='https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/챔피언/유미.png')
-                synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
-                nora_champion_instance.synergy.add(*synergy_instances)
-            else:
-                champion_instance, created = Champion.objects.get_or_create(name=name.text.replace(' ', ''), price=price.text[1])
-                ChampionImg.objects.get_or_create(champion=champion_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/챔피언/{name.text.replace(' ','')}.png")
-                synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
-                champion_instance.synergy.add(*synergy_instances)
+            champion_instance, created = Champion.objects.get_or_create(name=name.text.replace(' ', ''), price=price.text[1])
+            ChampionImg.objects.get_or_create(champion=champion_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/챔피언/{name.text.replace(' ','')}.png")
+            synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
+            champion_instance.synergy.add(*synergy_instances)
         
     driver.quit()

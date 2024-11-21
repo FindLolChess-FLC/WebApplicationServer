@@ -6,7 +6,7 @@ from Meta.models import Augmenter, AugmenterImg
 
 def augmenter_crawling():
     for tier in range(1,4):
-        url = f'https://lolchess.gg/guide/augments/set12?tier={tier}'
+        url = f'https://lolchess.gg/guide/augments/set13?tier={tier}'
         
         service = Service('/usr/local/bin/geckodriver')
         options = Options()
@@ -27,7 +27,10 @@ def augmenter_crawling():
                 AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/실버/{augment_instance.name}.png")
             elif tier == 2:
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='Gold')
-                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name}.png")
+                if ':' in augment_instance.name:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name.replace(':', '')}.png")
+                else:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name}.png")
             elif tier == 3:
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='Platinum')
                 AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/프리즘/{augment_instance.name}.png")

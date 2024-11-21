@@ -1,7 +1,4 @@
 from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
@@ -42,7 +39,6 @@ def lolchess_crawling():
     meta_champ_location = []
     meta_champ_item = []
     meta_champ_star = []
-    meta_augments = []
     meta_data = {} 
 
     # 챔프, 제목 정보 추출
@@ -61,23 +57,6 @@ def lolchess_crawling():
         detail_meta_champ = []
         detail_champ_star = {}
         detail_champ_item = {}
-        detail_meta_augments = []
-
-        if len(driver.find_elements(By.CSS_SELECTOR, '.css-1vpcif5.e1f4qx2j0 > div')) > 1:
-            augments_data = driver.find_elements(By.CSS_SELECTOR, '.css-xfs1a4.edddgya2 > div')
-            act = ActionChains(driver)
-
-            # 증강체 정보 추출
-            for augments in augments_data:
-                driver.execute_script("arguments[0].scrollIntoView();", augments)
-                act.move_to_element(augments).perform()
-                act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1 > div > strong')))
-                detail_meta_augments.append(act_data.text.replace(' ',''))
-                
-        else:
-            detail_meta_augments.append([])
-
-        meta_augments.append(detail_meta_augments)
 
         for champ in detail:
             detail_meta_champ.append(champ.text.replace(' ', ''))
@@ -86,6 +65,8 @@ def lolchess_crawling():
                 # 이미지의 src에서 아이템 추출
                 detail_champ_item[champ.text.replace(' ', '')] = [
                     re.findall(r'(?<=Item_)(.*?)(?=\.png)', i.get_attribute('src')) 
+                    if len(re.findall(r'(?<=Item_)(.*?)(?=\.png)', i.get_attribute('src'))) > 0
+                    else re.findall(r'items/([^/]+?)(?=_)', i.get_attribute('src')) 
                     for i in champ.find_elements(By.TAG_NAME, 'img') if i.get_attribute('src')
                 ]
                 detail_champ_star[champ.text.replace(' ', '')] = sum(len(star.find_elements(By.TAG_NAME, 'div')) for star in champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div'))
@@ -101,7 +82,6 @@ def lolchess_crawling():
     # 최종 메타 데이터 구성
     for num in range(len(meta_link)):
         meta_data[meta_title[num]] = {
-            '증강': meta_augments[num],
             '챔프': meta_champ[num],
             '별': meta_champ_star[num],
             '위치': meta_champ_location[num],
@@ -110,13 +90,6 @@ def lolchess_crawling():
     
     for data in meta_data:
         meta, craeted = LolMeta.objects.get_or_create(title = data)
-        
-        meta_augments = meta_data[data]['증강']
-        if len(meta_augments) > 1:
-            for augment in meta_augments:
-                for db_augment in Augmenter.objects.filter(name=augment):
-                    if augment == db_augment.name:
-                        meta.augmenter.add(db_augment)
 
         champ_star = {1:0, 2:0, 3:0, 4:0, 5:0} 
         for champ_name in meta_data[data]['챔프']:
@@ -133,7 +106,8 @@ def lolchess_crawling():
 
             if len(champ_item) > 0 :
                 for item in champ_item:
-                    champion.item.add(Item.objects.get(name=item[0]))
+                    if Item.objects.filter(name=item[0]).exists():
+                        champion.item.add(Item.objects.get(name=item[0]))
 
         max_value = max(champ_star.values())
         max_keys = [key for key, value in champ_star.items() if value == max_value]
