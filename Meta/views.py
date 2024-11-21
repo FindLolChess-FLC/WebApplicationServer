@@ -324,10 +324,6 @@ class MetaSearchView(APIView):
                 results = LolMeta.objects.filter(
                                                 Q(lolmetachampion__champion__name=first_keyword) | 
                                                 Q(lolmetachampion__champion__name=cleand_keyword))
-            if Augmenter.objects.filter(Q(name=first_keyword) | Q(name=cleand_keyword)).exists():
-                results = LolMeta.objects.filter(
-                                                Q(augmenter__name=first_keyword) | 
-                                                Q(augmenter__name=cleand_keyword))
             if Synergy.objects.filter(Q(name=first_keyword) | Q(name=cleand_keyword)).exists():
                 results = LolMeta.objects.filter(
                                                 Q(lolmetachampion__champion__synergy__name=first_keyword) |  
@@ -342,7 +338,6 @@ class MetaSearchView(APIView):
                 # 각 추가 키워드에 대해 결과 필터링
                 results = results.filter(
                     Q(lolmetachampion__champion__name=keyword) | Q(lolmetachampion__champion__name=keyword.replace(' ', '')) |
-                    Q(augmenter__name=keyword) | Q(augmenter__name=keyword.replace(' ', '')) |
                     Q(lolmetachampion__champion__synergy__name=keyword) |  Q(lolmetachampion__champion__synergy__name=keyword.replace(' ', '')) |
                     Q(title=keyword.strip()) | Q(title=keyword.replace(' ', ''))
                 )
