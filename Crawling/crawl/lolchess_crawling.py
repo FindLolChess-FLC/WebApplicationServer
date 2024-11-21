@@ -32,7 +32,7 @@ def lolchess_crawling():
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
     crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t7 > div.link-wrapper > a')
-    print(crawl_meta_link)
+
     meta_link = [link.get_attribute('href') for link in crawl_meta_link]
     meta_title = []
     meta_champ = []
