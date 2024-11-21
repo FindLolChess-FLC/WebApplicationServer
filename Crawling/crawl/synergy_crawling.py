@@ -4,7 +4,7 @@ from Meta.models import Synergy, SynergyImg
 
 # 시너지 정보 저장
 def synergy_crawling():
-    url = 'https://lolchess.gg/synergies/set12'
+    url = 'https://lolchess.gg/synergies/set13'
     driver = webdriver.Chrome()
 
     driver.get(url)
