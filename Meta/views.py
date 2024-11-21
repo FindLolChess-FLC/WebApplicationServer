@@ -271,6 +271,10 @@ class MetaSearchView(APIView):
                         for item in items:
                             if '상징' in item.kor_name :
                                 synergy = ''.join(re.findall(r'[^ 상징]',item.kor_name))
+
+                                if synergy not in meta_synergy:
+                                    meta_synergy[synergy] = 0
+                                    meta_synergy[f'{synergy}의 효과'] = Synergy.objects.get(name=synergy).effect
                                 meta_synergy[synergy] += 1
 
             meta_data['synergys'].append(meta_synergy)
@@ -372,6 +376,10 @@ class MetaSearchView(APIView):
                     for item in champ_item:
                         if '상징' in item['kor_name'] :
                             synergy = ''.join(re.findall(r'[^ 상징]',item['kor_name']))
+                            
+                            if synergy not in meta_data['synergys']:
+                                meta_data['synergys'][synergy] = 0
+                                meta_data['synergys'][f'{synergy}의 효과'] = Synergy.objects.get(name=synergy).effect
                             meta_data['synergys'][synergy] += 1
 
             data.append(meta_data)
