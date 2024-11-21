@@ -58,7 +58,7 @@ def item_crawling():
                                     if 'items' not in img.get_attribute('src') 
                                     else re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src'))
                                     for img in data]))
-        print(item)
+        
         if len(item) < 1:
             item = list(itertools.chain(*[re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src')) for img in data]))
             all_item.append(item)
