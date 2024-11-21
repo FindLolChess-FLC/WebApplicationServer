@@ -76,7 +76,6 @@ class ChampionImg(models.Model):
 
 class LolMeta(models.Model):
     title = models.CharField(max_length=50)
-    augmenter = models.ManyToManyField(Augmenter)
     like_count = models.IntegerField(default=0) 
     dislike_count = models.IntegerField(default=0) 
     reroll_lv = models.IntegerField(default=0)
