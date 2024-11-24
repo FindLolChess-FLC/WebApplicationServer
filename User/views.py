@@ -476,32 +476,48 @@ class EmailVerification(APIView):
         code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
         message = f"""
                     <!DOCTYPE html>
-                    <html lang="ko">
-                    <head>
-                        <meta charset="UTF-8">
-                        <title>인증 코드</title>
-                    </head>
-                    <body>
-                        <h1 style="color: #4386f0; border-bottom: 1px solid black; margin: 0 0 20px 0">FLC</h1>
-                        <table style="width: 100%; background-color: #f0f0f0; padding: 5px;">
+                <html lang="ko">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>인증 코드</title>
+                </head>
+                <body style="margin: 0; padding: 0; background-color: #FFF; font-family: Pretendard;">
+                    <table style="background-color: #FFF; width: 37.9375rem; height: 32.125rem; margin: auto;">
                         <tr>
                             <td align="center">
-                                <h2 style="color: #4386f0; margin: 0;">FLC 이메일 인증 안내</h2>
-                                <table style="background-color: #ffffff; width: 355px; margin: 25px 0; padding: 20px;">
+                                <table style="background: #FFF; width: 37.9375rem; height: 32.125rem; margin: auto; box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.1);">
                                     <tr>
-                                        <td align="center">
-                                            <p style="margin: 0 0 10px 0;">로그인 승인 코드입니다.</p>
-                                            <strong style="letter-spacing: 5px; margin: 20px 0;">{code}</strong>
+                                        <td style="padding: 0;">
+                                            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #0D0D0D; margin: 1.8125rem 0 0 1.6875rem;border-bottom: 0.0625rem solid #0D0D0D; width: 34.625rem; padding-bottom: 0.75rem; font-style: normal; line-height: normal;">Find Lol Chess</h2>
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <td align="center">
+                                            <h1 style="margin: 4.9375rem 0 2.6875rem 0; font-size: 1.625rem; font-style: normal; font-weight: 600; color: #0D0D0D; line-height: normal;">FLC 이메일 인증 안내</h1>
+                                            <p style="margin: 0; font-size: 0.9375rem; font-size: 0.9375rem; font-style: normal; font-weight: 500; color: #0D0D0D; line-height: 135.196%">FLC_FindLolChess에서 이메일 주소 인증을 요청하셨습니다.</p>
+                                            <p style="margin: 0 0 2.6875rem 0; font-size: 0.9375rem; font-style: normal; font-weight: 500; color: #0D0D0D; line-height: 135.196%">아래의 인증코드를 입력하여 인증을 완료해주세요.</p>
+                                            <table style="background-color: #F7F7F7; text-align: center; margin: 0 auto 5.0625rem; width: 27.3125rem; height: 8.75rem;">
+                                                <tr>
+                                                    <td>
+                                                        <p style="margin: 0 0 1.5rem 0; font-size: 0.9375rem; font-style: normal; font-weight: 600; color: #0D0D0D; line-height: normal;">로그인 승인 코드입니다.</p>
+                                                        <strong style="font-size: 1.6875rem; font-style: normal; font-weight: 600; color: #5144ED; letter-spacing: 0.3125rem; line-height: normal;">{code}</strong>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                    <td align="center" style="padding: 20px; background-color: #FFF; font-size: 12px; color: #aaaaaa;">
+                                        © 2024 Find Lol Chess. All rights reserved.
+                                    </td>
+                                    </tr>
                                 </table>
-                                <p style="margin: 0;">FLC_FindLolChess에서 이메일 주소 인증을 요청하셨습니다.</p>
-                                <p style="margin: 0;">아래의 인증코드를 입력하여 인증을 완료해주세요.</p>
                             </td>
                         </tr>
                     </table>
-                    </body>
-                    </html>
+                </body>
+                </html>
                     """
         email = EmailMessage(subject=subject, body=message, to=[to], from_email=from_email)
         email.content_subtype = 'html'  # 이메일 콘텐츠 타입을 HTML로 설정
