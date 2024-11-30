@@ -20,9 +20,8 @@ def synergy_crawling():
 
     synergy_name_data = driver.find_elements(By.CSS_SELECTOR, 'div > div.css-tb5sq7.edroetd8 > h6')
     synergy_effect_data = driver.find_elements(By.CLASS_NAME, 'css-1dk1fk9.edroetd4')
-    version = 13
 
     for name, effect in zip(synergy_name_data, synergy_effect_data):
 
         synergy_instance, created = Synergy.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ' '))
-        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/시너지/{synergy_instance.name}.png?v={version}")
+        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/시너지/{synergy_instance.name}.png?invalidate=true")
