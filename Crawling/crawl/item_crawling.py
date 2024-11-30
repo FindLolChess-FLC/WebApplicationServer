@@ -55,11 +55,18 @@ def item_crawling():
     version = 13
 
     for data in item_data:
-        item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) 
-                                    if 'items' not in img.get_attribute('src') 
-                                    else re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src'))
-                                    for img in data]))
+        item = []
         
+        for img in data:
+            src = img.get_attribute('src')
+
+            if 'TFT13' in src:
+                item.extend(re.findall(r'TFT\d+_(.+)\.png', src))
+            elif 'items' not in src:
+                item.extend(re.findall(r'(?<=Item_)(.*?)(?=\.png)', src))
+            else:
+                item.extend(re.findall(r'items/([^/]+?)(?=_)', src))
+
         if len(item) < 1:
             item = list(itertools.chain(*[re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src')) for img in data]))
             all_item.append(item)
