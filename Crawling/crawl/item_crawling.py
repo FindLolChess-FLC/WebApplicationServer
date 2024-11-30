@@ -52,7 +52,8 @@ def item_crawling():
 
     item_data = [img.find_elements(By.TAG_NAME, 'img') for img in crawl_data]
     all_item = []
-    
+    version = 13
+
     for data in item_data:
         item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) 
                                     if 'items' not in img.get_attribute('src') 
@@ -82,10 +83,10 @@ def item_crawling():
                                         kor_item1 = item_translation(detail_item[1]), item1 = detail_item[1],
                                         kor_item2 = item_translation(detail_item[2]), item2 = detail_item[2], 
                                         effect = detail_item[4])
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png?v={version}")
         else:
             item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png?v={version}")
 
     comb_url = 'https://lolchess.gg/items/set13'
     driver.get(comb_url)
@@ -104,6 +105,6 @@ def item_crawling():
         effect = act_data.find_element(By.TAG_NAME, 'p').text
         
         item_instance, created = Item.objects.get_or_create(name = name, kor_name = kor_name, effect = effect)
-        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png?v={version}")
         
     driver.quit()
