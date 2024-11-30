@@ -475,7 +475,7 @@ class EmailVerification(APIView):
         from_email = config('EMAIL_HOST_USER')
         code = int(''.join(map(str,[random.randint(1, 9) for _ in range(4)])))
         message = f"""
-                    <!DOCTYPE html>
+                <!DOCTYPE html>
                 <html lang="ko">
                 <head>
                     <meta charset="UTF-8">
