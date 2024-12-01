@@ -105,9 +105,10 @@ def lolchess_crawling():
             champ_item = meta_data[data]['아이템'][champ_name]
 
             if len(champ_item) > 0 :
-                for item in champ_item:
-                    if Item.objects.filter(name=item[0]).exists():
-                        champion.item.add(Item.objects.get(name=item[0]))
+                if isinstance(item, list) and len(item) > 0:
+                    for item in champ_item:
+                        if Item.objects.filter(name=item[0]).exists():
+                            champion.item.add(Item.objects.get(name=item[0]))
 
         max_value = max(champ_star.values())
         max_keys = [key for key, value in champ_star.items() if value == max_value]
