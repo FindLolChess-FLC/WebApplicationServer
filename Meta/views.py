@@ -263,9 +263,8 @@ class MetaSearchView(APIView):
 
                     for synergy in synergys:
                         if synergy.name not in meta_synergy:
-                            meta_synergy[synergy.name] = 0
-                            meta_synergy[f'{synergy.name}의 효과'] = synergy.effect
-                        meta_synergy[synergy.name] += 1
+                            meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src}
+                        meta_synergy[synergy.name]['number'] += 1
 
                     if len(items) > 0 :
                         for item in items:
@@ -273,9 +272,9 @@ class MetaSearchView(APIView):
                                 synergy = ''.join(re.findall(r'[^ 상징]',item.kor_name))
 
                                 if synergy not in meta_synergy:
-                                    meta_synergy[synergy] = 0
-                                    meta_synergy[f'{synergy}의 효과'] = Synergy.objects.get(name=synergy).effect
-                                meta_synergy[synergy] += 1
+                                    meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                                meta_synergy[synergy]['number'] += 1
+
 
             meta_data['synergys'].append(meta_synergy)
             data.append(meta_data)
@@ -324,10 +323,6 @@ class MetaSearchView(APIView):
                 results = LolMeta.objects.filter(
                                                 Q(lolmetachampion__champion__name=first_keyword) | 
                                                 Q(lolmetachampion__champion__name=cleand_keyword))
-            if Augmenter.objects.filter(Q(name=first_keyword) | Q(name=cleand_keyword)).exists():
-                results = LolMeta.objects.filter(
-                                                Q(augmenter__name=first_keyword) | 
-                                                Q(augmenter__name=cleand_keyword))
             if Synergy.objects.filter(Q(name=first_keyword) | Q(name=cleand_keyword)).exists():
                 results = LolMeta.objects.filter(
                                                 Q(lolmetachampion__champion__synergy__name=first_keyword) |  
@@ -342,7 +337,6 @@ class MetaSearchView(APIView):
                 # 각 추가 키워드에 대해 결과 필터링
                 results = results.filter(
                     Q(lolmetachampion__champion__name=keyword) | Q(lolmetachampion__champion__name=keyword.replace(' ', '')) |
-                    Q(augmenter__name=keyword) | Q(augmenter__name=keyword.replace(' ', '')) |
                     Q(lolmetachampion__champion__synergy__name=keyword) |  Q(lolmetachampion__champion__synergy__name=keyword.replace(' ', '')) |
                     Q(title=keyword.strip()) | Q(title=keyword.replace(' ', ''))
                 )
@@ -366,9 +360,8 @@ class MetaSearchView(APIView):
 
                 for synergy in champ_synergy:
                     if synergy not in meta_data['synergys']:
-                        meta_data['synergys'][synergy] = 0
-                        meta_data['synergys'][f'{synergy}의 효과'] = Synergy.objects.get(name=synergy).effect
-                    meta_data['synergys'][synergy] += 1
+                        meta_data['synergys'][synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                    meta_data['synergys'][synergy]['number'] += 1
 
                 if 'item' in champion:
                     champ_item = champion['item']
@@ -378,9 +371,8 @@ class MetaSearchView(APIView):
                             synergy = ''.join(re.findall(r'[^ 상징]',item['kor_name']))
                             
                             if synergy not in meta_data['synergys']:
-                                meta_data['synergys'][synergy] = 0
-                                meta_data['synergys'][f'{synergy}의 효과'] = Synergy.objects.get(name=synergy).effect
-                            meta_data['synergys'][synergy] += 1
+                                meta_data['synergys'][synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                            meta_data['synergys'][synergy]['number'] += 1
 
             data.append(meta_data)
 

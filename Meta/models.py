@@ -59,7 +59,7 @@ class ItemImg(models.Model):
 
 class Champion(models.Model):
     name = models.CharField(max_length=255)
-    price = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)]) 
+    price = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)]) 
     synergy = models.ManyToManyField(Synergy)
 
     def __str__(self):
