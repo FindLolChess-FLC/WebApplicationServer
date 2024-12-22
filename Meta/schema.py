@@ -73,7 +73,6 @@ lol_meta_schema = openapi.Schema(
         ),
         'synergys' : openapi.Schema(
     type=openapi.TYPE_ARRAY,
-    description='시너지 목록',
     items=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
