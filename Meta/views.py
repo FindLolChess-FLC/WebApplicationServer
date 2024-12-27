@@ -353,15 +353,17 @@ class MetaSearchView(APIView):
             meta_champion = LolMetaChampionSerializer(LolMetaChampion.objects.filter(meta__title=meta.title), many=True).data
             meta_data = {
                 'meta': LolMetaSerializer(meta).data,
-                'synergys': {},
+                'synergys': [],
             }
+            meta_synergy = {}
+
             for champion in meta_champion:
                 champ_synergy = champion['champion']['synergy']
 
                 for synergy in champ_synergy:
-                    if synergy not in meta_data['synergys']:
-                        meta_data['synergys'][synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
-                    meta_data['synergys'][synergy]['number'] += 1
+                    if synergy not in meta_synergy:
+                        meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                    meta_synergy[synergy]['number'] += 1
 
                 if 'item' in champion:
                     champ_item = champion['item']
@@ -370,10 +372,11 @@ class MetaSearchView(APIView):
                         if '상징' in item['kor_name'] :
                             synergy = ''.join(re.findall(r'[^ 상징]',item['kor_name']))
                             
-                            if synergy not in meta_data['synergys']:
-                                meta_data['synergys'][synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
-                            meta_data['synergys'][synergy]['number'] += 1
+                            if synergy not in meta_synergy:
+                                meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                            meta_synergy[synergy]['number'] += 1
 
+            meta_data['synergys'].append(meta_synergy)
             data.append(meta_data)
 
         if data == []:
