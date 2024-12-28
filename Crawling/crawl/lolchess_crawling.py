@@ -38,20 +38,20 @@ def lolchess_crawling():
         text = meta.text
         if '공략 더 보기' in text:
             meta_title.append(re.split(r'\n', text)[0])
-            meta_champ.append([champ for champ in re.findall(r'\$\d+\s+(\S+)', ' '.join(re.split(r'\n', text.replace(' ', ''))))])
 
     # 각 링크에 대한 상세 정보 크롤링
     for link in meta_link:
         driver.get(link)
         driver.implicitly_wait(1)
 
-        detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-lmthfr.e1mgaavq0 > div')
+        detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-y6vj5x.e1mgaavq0 > div')
         detail_meta_champ = []
         detail_champ_star = {}
         detail_champ_item = {}
 
         for champ in detail:
-            detail_meta_champ.append(champ.text.replace(' ', ''))
+            if champ.text.replace(' ', ''):
+                detail_meta_champ.append(champ.text.replace(' ', ''))
 
             if len(champ.text) > 0:
                 # 이미지의 src에서 아이템 추출
@@ -63,11 +63,11 @@ def lolchess_crawling():
                 ]
                 detail_champ_star[champ.text.replace(' ', '')] = sum(len(star.find_elements(By.TAG_NAME, 'div')) for star in champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div'))
 
+        meta_champ.append(detail_meta_champ)
         # 챔프 위치 정보 추출
         meta_champ_location.append(
             {champ: index for index, champ in enumerate(detail_meta_champ[:-1], 1) if champ}
         )
-
         meta_champ_item.append(detail_champ_item)
         meta_champ_star.append(detail_champ_star)
 
@@ -79,31 +79,31 @@ def lolchess_crawling():
             '위치': meta_champ_location[num],
             '아이템': meta_champ_item[num]
         }
-    
-    for data in meta_data:
-        meta, craeted = LolMeta.objects.get_or_create(title = data)
+    print(meta_data)
+    # for data in meta_data:
+    #     meta, craeted = LolMeta.objects.get_or_create(title = data)
 
-        champ_star = {1:0, 2:0, 3:0, 4:0, 5:0} 
-        for champ_name in meta_data[data]['챔프']:
-            champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
-                                                        champion = Champion.objects.get(name = champ_name),
-                                                        star = meta_data[data]['별'][champ_name], 
-                                                        location = meta_data[data]['위치'][champ_name])
+    #     champ_star = {1:0, 2:0, 3:0, 4:0, 5:0} 
+    #     for champ_name in meta_data[data]['챔프']:
+    #         champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
+    #                                                     champion = Champion.objects.get(name = champ_name),
+    #                                                     star = meta_data[data]['별'][champ_name], 
+    #                                                     location = meta_data[data]['위치'][champ_name])
             
-            price = Champion.objects.get(name = champ_name).price
+    #         price = Champion.objects.get(name = champ_name).price
 
-            champ_star[price] += meta_data[data]['별'][champ_name]
+    #         champ_star[price] += meta_data[data]['별'][champ_name]
 
-            champ_item = meta_data[data]['아이템'][champ_name]
+    #         champ_item = meta_data[data]['아이템'][champ_name]
 
-            if len(champ_item) > 0 :
-                for item in champ_item:
-                    if isinstance(item, list) and len(item) > 0:
-                        if Item.objects.filter(name=item[0]).exists():
-                            champion.item.add(Item.objects.filter(name=item[0]).first())
+    #         if len(champ_item) > 0 :
+    #             for item in champ_item:
+    #                 if isinstance(item, list) and len(item) > 0:
+    #                     if Item.objects.filter(name=item[0]).exists():
+    #                         champion.item.add(Item.objects.filter(name=item[0]).first())
 
-        max_value = max(champ_star.values())
-        max_keys = [key for key, value in champ_star.items() if value == max_value]
+    #     max_value = max(champ_star.values())
+    #     max_keys = [key for key, value in champ_star.items() if value == max_value]
 
-        meta.reroll_lv=reroll_lv(max(max_keys))
-        meta.save()
+    #     meta.reroll_lv=reroll_lv(max(max_keys))
+    #     meta.save()
