@@ -53,7 +53,8 @@ def item_crawling():
     act = ActionChains(driver)
 
     for index, item in enumerate(item_data):
-        act.move_to_element(item).perform()
+        driver.execute_script("arguments[0].scrollIntoView();", item)
+        act.move_to_element(item).click().perform()
         
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-64ogn7.eosr60k0')))
         name_data = act_data.find_element(By.TAG_NAME,'strong').text
@@ -79,7 +80,8 @@ def item_crawling():
     comb_act = ActionChains(driver)
 
     for comb_item in comb_item_data[1:]:
-        comb_act.move_to_element(comb_item).perform()
+        driver.execute_script("arguments[0].scrollIntoView();", comb_item)
+        comb_act.move_to_element(comb_item).click().perform()
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
 
         kor_name = act_data.find_element(By.TAG_NAME, 'strong').text
