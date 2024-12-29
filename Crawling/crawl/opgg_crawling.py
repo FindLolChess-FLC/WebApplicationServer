@@ -47,20 +47,28 @@ def opgg_crawling():
         detail_champion = detail.find_elements(By.CLASS_NAME, 'hexagon')
         location = {}
         item = {}
+        star = {}
+
         for index, champion in enumerate(detail_champion, 1):
             
             if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 2:
                 name = champion.find_element(By.CLASS_NAME, 'css-1vg5gno').text
                 location[name] = index
 
-                if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
-                    for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
-                        print(champ_item.get_attribute('alt'))
-                        item[name] = champ_item.get_attribute('alt')
+                # if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
+                #     for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
+                #         item[name] = champ_item.get_attribute('alt')
 
+                if champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span'):
+                    star[name] = len(champion.find_elements(By.CSS_SELECTOR, 'div.hexagon-star > span'))
+                    print(len(champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span')))
+                else:
+                    star[name] = 2
+                    print(2)
 
         meta_champ_location.append(location)
         meta_champ_item.append(item)
+        meta_champ_star.append(star)
 
-    print(meta_champ_item)
+    print(meta_champ_star)
  
