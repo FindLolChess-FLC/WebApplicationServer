@@ -1,10 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-import re
 from Meta.models import * 
 
 def reroll_lv(level):
@@ -43,18 +40,35 @@ def opgg_crawling():
         
         act = ActionChains(driver)
         act.move_to_element(meta.find_element(By.CLASS_NAME, 'btn-detail')).click().perform()
-
+    
     detail_meta = driver.find_elements(By.CLASS_NAME, 'builder-container')
 
     for detail in detail_meta:
         detail_champion = detail.find_elements(By.CLASS_NAME, 'hexagon')
         location = {}
-        for index, champion in enumerate(detail_champion, 1):
+        item = {}
+        star = {}
 
-            if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 1:
+        for index, champion in enumerate(detail_champion, 1):
+            
+            if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 2:
                 name = champion.find_element(By.CLASS_NAME, 'css-1vg5gno').text
                 location[name] = index
 
-        meta_champ_location.append(location)
+                # if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
+                #     for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
+                #         item[name] = champ_item.get_attribute('alt')
 
-    print(meta_champ_location)
+                if champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span'):
+                    star[name] = len(champion.find_elements(By.CSS_SELECTOR, 'div.hexagon-star > span'))
+                    print(len(champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span')))
+                else:
+                    star[name] = 2
+                    print(2)
+
+        meta_champ_location.append(location)
+        meta_champ_item.append(item)
+        meta_champ_star.append(star)
+
+    print(meta_champ_star)
+ 

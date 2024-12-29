@@ -46,20 +46,20 @@ def lolchess_crawling():
         text = meta.text
         if '공략 더 보기' in text:
             meta_title.append(re.split(r'\n', text)[0])
-            meta_champ.append([champ for champ in re.findall(r'\$\d+\s+(\S+)', ' '.join(re.split(r'\n', text.replace(' ', ''))))])
 
     # 각 링크에 대한 상세 정보 크롤링
     for link in meta_link:
         driver.get(link)
         driver.implicitly_wait(10)
 
-        detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-lmthfr.e1mgaavq0 > div')
+        detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-y6vj5x.e1mgaavq0 > div')
         detail_meta_champ = []
         detail_champ_star = {}
         detail_champ_item = {}
 
         for champ in detail:
-            detail_meta_champ.append(champ.text.replace(' ', ''))
+            if champ.text.replace(' ', ''):
+                detail_meta_champ.append(champ.text.replace(' ', ''))
 
             if len(champ.text) > 0:
                 # 이미지의 src에서 아이템 추출
@@ -71,11 +71,11 @@ def lolchess_crawling():
                 ]
                 detail_champ_star[champ.text.replace(' ', '')] = sum(len(star.find_elements(By.TAG_NAME, 'div')) for star in champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div'))
 
+        meta_champ.append(detail_meta_champ)
         # 챔프 위치 정보 추출
         meta_champ_location.append(
-            {champ: index for index, champ in enumerate(detail_meta_champ[:-1], 1) if champ}
+            {champ: index for index, champ in enumerate(detail_meta_champ, 1) if champ}
         )
-
         meta_champ_item.append(detail_champ_item)
         meta_champ_star.append(detail_champ_star)
 
@@ -87,7 +87,7 @@ def lolchess_crawling():
             '위치': meta_champ_location[num],
             '아이템': meta_champ_item[num]
         }
-    
+
     for data in meta_data:
         meta, craeted = LolMeta.objects.get_or_create(title = data)
 

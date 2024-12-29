@@ -1,11 +1,17 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Synergy(models.Model):
     name = models.CharField(max_length=15)
     effect = models.CharField(max_length=500)
+    sequence = ArrayField(
+        models.CharField(max_length=20), 
+        blank=True,
+        default=list
+    )
 
     def __str__(self):
         return self.name
@@ -38,15 +44,12 @@ class AugmenterImg(models.Model):
 
 class Item(models.Model):
     name = models.CharField(max_length=50)
-    kor_name = models.CharField(max_length=50)
     effect = models.CharField(max_length=500)
     item1 = models.CharField(max_length=50)
-    kor_item1 = models.CharField(max_length=50)
     item2 = models.CharField(max_length=50)
-    kor_item2 = models.CharField(max_length=50)
 
     def __str__(self):
-        return self.kor_name
+        return self.name
 
 
 class ItemImg(models.Model):
@@ -54,13 +57,13 @@ class ItemImg(models.Model):
     img_src = models.CharField(max_length=255)
 
     def __str__(self):
-        return self.item.kor_name
+        return self.item.name
 
 
 class Champion(models.Model):
     name = models.CharField(max_length=255)
     price = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(6)]) 
-    synergy = models.ManyToManyField(Synergy)
+    synergy = models.ManyToManyField(Synergy, blank=True)
 
     def __str__(self):
         return self.name
