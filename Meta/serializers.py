@@ -44,7 +44,7 @@ class SynergySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Synergy
-        fields = ['name', 'effect', 'img']
+        fields = '__all__'
 
 
 # 아이템 이미지
@@ -61,7 +61,7 @@ class ItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Item
-        fields = ['kor_name','kor_item1', 'kor_item2', 'effect', 'img']
+        fields = ['name','item1', 'item2', 'effect', 'img']
 
 
 # 증강체 이미지
