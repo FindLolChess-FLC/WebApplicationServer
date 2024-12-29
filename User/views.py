@@ -613,11 +613,11 @@ class DeleteIdView(APIView):
             }
         ),
         400: openapi.Response(
-            description='회원 탈퇴에 실패 했습니다',
+            description='현재 비밀번호가 일치하지 않습니다.',
             examples={
                 'application/json': 
                     {'resultcode': 'FAIL', 
-                    'message': '회원 탈퇴에 실패 했습니다'
+                    'message': '현재 비밀번호가 일치하지 않습니다.'
                     },
                 
             }
@@ -625,23 +625,15 @@ class DeleteIdView(APIView):
     }
 )
     
-    def patch(self, request):
+    def delete(self, request):
         user = request.user
         current = request.data.get('password')
 
         if user.check_password(current):
-            serializer = DeleteIdSerializer(user, data={'is_active':False})
-            
-            if serializer.is_valid():
-                serializer.save()
-                return Response({'resultcode': 'SUCCESS', 'message': '회원 탈퇴에 성공했습니다.'}, status=status.HTTP_200_OK)
-        else:
-
-            return Response({'resultcode': 'FAIL', 'message': '현재 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'resultcode': 'FAIL',
-                        'message': '회원 탈퇴에 실패 했습니다',
-                        'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            user.delete()
+            return Response({'resultcode': 'SUCCESS', 'message': '회원 탈퇴에 성공했습니다.'}, status=status.HTTP_200_OK)
+        
+        return Response({'resultcode': 'FAIL', 'message': '현재 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 즐겨 찾기 조회

@@ -1,3 +1,4 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path
 from .views import SignInView, SignUpView, UpdateNicknameView, UpdatePasswordView, SignOutView, EmailDuplicateView, NicknameDuplicateView, DeleteIdView, EmailVerification, FavoriteView, CheckFavoriteView, DeleteFavoriteView
 
@@ -14,4 +15,36 @@ urlpatterns = [
     path('checkfavorite/', CheckFavoriteView.as_view()), # 즐겨찾기 조회
     path('favorite/', FavoriteView.as_view()), # 즐겨찾기 
     path('deletefavorite/', DeleteFavoriteView.as_view()), # 즐겨찾기 삭제
+    # 비밀번호 초기화
+    path(
+        'passwordreset/',
+        auth_views.PasswordResetView.as_view(
+            template_name='registration/password_reset_form.html',
+        ),
+        name='password_reset'
+    ),
+    # 비밀번호 초기화 이메일 전송 후 확인
+    path(
+        'passwordreset/done/',
+        auth_views.PasswordResetDoneView.as_view(
+            template_name='registration/password_reset_done.html',
+        ),
+        name='password_reset_done'
+    ),
+    # 링크 클릭 후 새로운 비밀번호 입력
+    path(
+        'reset/<uidb64>/<token>/',
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name='registration/password_reset_confirm.html',
+        ),
+        name='password_reset_confirm'
+    ),
+    # 비밀번호 변경 완료
+    path(
+        'reset/done/',
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name='registration/password_reset_complete.html',
+        ),
+        name='password_reset_complete'
+    ),
 ]

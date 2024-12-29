@@ -37,63 +37,47 @@ def item_crawling():
     driver = webdriver.Chrome()
 
     driver.get(url)
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(1)
     
-    crawl_data = driver.find_elements(By.CLASS_NAME, 'css-1m59px.e1jv8n014')
-    effect_data = driver.find_elements(By.CSS_SELECTOR, 'td.item > div > div.relative.overflow-hidden')
-
-    item_data = [img.find_elements(By.TAG_NAME, 'img') for img in crawl_data]
-    all_item = []
-    
-    for data in item_data:
-        item = list(itertools.chain(*[re.findall(r'(?<=Item_)(.*?)(?=\.png)', img.get_attribute('src')) 
-                                    if 'items' not in img.get_attribute('src') 
-                                    else re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src'))
-                                    for img in data]))
-        print(item)
-        if len(item) < 1:
-            item = list(itertools.chain(*[re.findall(r'items/([^/]+?)(?=_)', img.get_attribute('src')) for img in data]))
-            all_item.append(item)
-            continue
-
-        all_item.append(item)
+    crawl_data = driver.find_elements(By.CSS_SELECTOR, 'td.name.css-17s55cr.efxas325')
+    item_data = driver.find_elements(By.CSS_SELECTOR, 'td.name.css-17s55cr.efxas325 > div > div.relative.overflow-hidden')
 
     act = ActionChains(driver)
 
-    for act_num in range(len(effect_data)):
-        act.move_to_element(effect_data[act_num]).perform()
+    for index, item in enumerate(item_data):
+        act.move_to_element(item).perform()
         
-        act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
-        all_item[act_num].append(act_data.find_element(By.TAG_NAME,'strong').text)
-        all_item[act_num].append(''.join(list(itertools.chain([i.text for i in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' '))
+        act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-64ogn7.eosr60k0')))
+        name_data = act_data.find_element(By.TAG_NAME,'strong').text
+        effect_data = ''.join(list(itertools.chain([i.text for i in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' ')
+        detail_item_data = crawl_data[index].find_elements(By.CSS_SELECTOR, '.compositions > div > img')
+        
+        if detail_item_data:
+            detail_item = [''.join(re.findall(r"TFT_Item_(.*?)\.png", item.get_attribute('src'))) for item in detail_item_data]
+            item1_data = item_translation(detail_item[0].lower())
+            item2_data = item_translation(detail_item[1].lower())
 
-    for detail_item in all_item:
-        if len(detail_item) > 4:
-            item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[3], 
-                                        kor_item1 = item_translation(detail_item[1]), item1 = detail_item[1],
-                                        kor_item2 = item_translation(detail_item[2]), item2 = detail_item[2], 
-                                        effect = detail_item[4])
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+            item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
         else:
-            item_instance, created = Item.objects.get_or_create(name = detail_item[0], kor_name = detail_item[1], effect = detail_item[2])
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+            item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
+            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
 
-    comb_url = 'https://lolchess.gg/items/set13'
+    comb_url = 'https://lolchess.gg/items/set13/table'
     driver.get(comb_url)
     driver.implicitly_wait(10)
 
-    comb_item_data = driver.find_elements(By.CSS_SELECTOR, '.css-uw2vh5.eqoykzw2 > button > div')
+    comb_item_data = driver.find_elements(By.CSS_SELECTOR, ' tbody > tr:nth-child(1) > td')
     comb_act = ActionChains(driver)
 
-    for comb_item in comb_item_data:
+    for comb_item in comb_item_data[1:]:
         comb_act.move_to_element(comb_item).perform()
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.css-16emzv1.eosr60k1')))
 
-        name = ''.join(re.findall(r'(?<=Item_)(.*?)(?=\.png)', comb_item.find_element(By.TAG_NAME, 'img').get_attribute('src')))
         kor_name = act_data.find_element(By.TAG_NAME, 'strong').text
         effect = act_data.find_element(By.TAG_NAME, 'p').text
         
-        item_instance, created = Item.objects.get_or_create(name = name, kor_name = kor_name, effect = effect)
-        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.kor_name.replace(' ','')}.png")
+        item_instance, created = Item.objects.get_or_create(name = kor_name, effect = effect)
+        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
         
     driver.quit()

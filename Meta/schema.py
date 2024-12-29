@@ -71,13 +71,33 @@ lol_meta_schema = openapi.Schema(
                 }
             )
         ),
-        'synergys': openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            description='시너지 목록',
-            properties={
-                "시너지": openapi.Schema(type=openapi.TYPE_INTEGER, description="시너지 개수", example=5),
-                "시너지의 효과": openapi.Schema(type=openapi.TYPE_STRING, description="시너지 효과 설명", example="벌꿀술사가 꿀벌 5마리를 얻습니다. 꿀벌은 3초마다 대상에게 마법 피해를 입힙니다..."),
-            }
-        )
+        'synergys' : openapi.Schema(
+    type=openapi.TYPE_ARRAY,
+    items=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "시너지 이름": openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "number": openapi.Schema(type=openapi.TYPE_INTEGER, description="시너지 개수", example=2),
+                    "effect": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        description="시너지 효과 설명",
+                        example="정복자의 처치 관여가 정복 중첩을 부여합니다. 정복 중첩을 충분히 얻으면 전리품이 든 군수품을 엽니다!"
+                    ),
+                    "img_src": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                        description="시너지 이미지 URL",
+                        example="https://example.com/item_image.png"
+                    ),
+                    'sequence': openapi.Schema(
+                                            type=openapi.TYPE_ARRAY,
+                                            items=openapi.Schema(type=openapi.TYPE_STRING, description="시너지 순위", example="bronze, silver")
+                                        ),
+                },
+            )
+        },
+    ),
+)
     }
 )
