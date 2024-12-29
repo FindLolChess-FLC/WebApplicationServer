@@ -263,7 +263,7 @@ class MetaSearchView(APIView):
 
                     for synergy in synergys:
                         if synergy.name not in meta_synergy:
-                            meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src}
+                            meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src, 'sequence': synergy.sequence}
                         meta_synergy[synergy.name]['number'] += 1
 
                     if len(items) > 0 :
@@ -272,7 +272,7 @@ class MetaSearchView(APIView):
                                 synergy = ''.join(re.findall(r'[^ 상징]',item.kor_name))
 
                                 if synergy not in meta_synergy:
-                                    meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                                    meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
                                 meta_synergy[synergy]['number'] += 1
 
 
@@ -362,7 +362,7 @@ class MetaSearchView(APIView):
 
                 for synergy in champ_synergy:
                     if synergy not in meta_synergy:
-                        meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                        meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
                     meta_synergy[synergy]['number'] += 1
 
                 if 'item' in champion:
@@ -373,7 +373,7 @@ class MetaSearchView(APIView):
                             synergy = ''.join(re.findall(r'[^ 상징]',item['kor_name']))
                             
                             if synergy not in meta_synergy:
-                                meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src}
+                                meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
                             meta_synergy[synergy]['number'] += 1
 
             meta_data['synergys'].append(meta_synergy)

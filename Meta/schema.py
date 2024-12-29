@@ -90,6 +90,10 @@ lol_meta_schema = openapi.Schema(
                         description="시너지 이미지 URL",
                         example="https://example.com/item_image.png"
                     ),
+                    'sequence': openapi.Schema(
+                                            type=openapi.TYPE_ARRAY,
+                                            items=openapi.Schema(type=openapi.TYPE_STRING, description="시너지 순위", example="bronze, silver")
+                                        ),
                 },
             )
         },
