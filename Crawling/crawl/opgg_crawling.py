@@ -20,7 +20,7 @@ def opgg_crawling():
     driver = webdriver.Chrome()
 
     driver.get(url)
-    driver.implicitly_wait(30)
+    driver.implicitly_wait(1)
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CLASS_NAME, 'css-1ywivro')
