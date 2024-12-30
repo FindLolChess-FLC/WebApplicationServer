@@ -154,7 +154,7 @@ class ItemSearchView(APIView):
     def get(self, request):
         item = request.query_params.get('name')
         if item:
-            item_instance = Item.objects.filter(kor_name = item).first()
+            item_instance = Item.objects.filter(name = item).first()
 
             if item_instance:
                 serializer = ItemSerializer(item_instance)
@@ -268,8 +268,8 @@ class MetaSearchView(APIView):
 
                     if len(items) > 0 :
                         for item in items:
-                            if '상징' in item.kor_name :
-                                synergy = ''.join(re.findall(r'[^ 상징]',item.kor_name))
+                            if '상징' in item.name :
+                                synergy = ''.join(re.findall(r'[^ 상징]',item.name))
 
                                 if synergy not in meta_synergy:
                                     meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
@@ -369,8 +369,8 @@ class MetaSearchView(APIView):
                     champ_item = champion['item']
 
                     for item in champ_item:
-                        if '상징' in item['kor_name'] :
-                            synergy = ''.join(re.findall(r'[^ 상징]',item['kor_name']))
+                        if '상징' in item['name'] :
+                            synergy = ''.join(re.findall(r'[^ 상징]',item['name']))
                             
                             if synergy not in meta_synergy:
                                 meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
