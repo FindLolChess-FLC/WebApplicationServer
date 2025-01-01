@@ -32,7 +32,9 @@ ALLOWED_HOSTS = [config('SERVER'), config('SERVER_IP')]
 
 CORS_ALLOWED_ORIGINS  = [
     config('REACT_SERVER_IP'),
+    config('REACT_SERVER_IP2'),
     config('REACT_SERVER'),
+    config('REACT_SERVER2'),
 ]
 
 CORS_ALLOW_CREDENTIALS = True
