@@ -256,7 +256,6 @@ class MetaSearchView(APIView):
             meta_synergy = {}
 
             for meta_champion in meta_champions:
-                
                 if meta.id == meta_champion.meta.id:
                     synergys = meta_champion.champion.synergy.all()
                     items = meta_champion.item.all()
@@ -276,7 +275,12 @@ class MetaSearchView(APIView):
                                 meta_synergy[synergy]['number'] += 1
 
 
-            meta_data['synergys'].append(meta_synergy)
+            meta_data['synergys'].append(
+                                        dict(sorted(meta_synergy.items(), key=lambda x: (
+                                            'unique' in x[1]['sequence'],  
+                                            x[1]['number']
+                                        ), reverse=True))
+                                    )
             data.append(meta_data)
 
         return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
@@ -376,7 +380,12 @@ class MetaSearchView(APIView):
                                 meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
                             meta_synergy[synergy]['number'] += 1
 
-            meta_data['synergys'].append(meta_synergy)
+            meta_data['synergys'].append(
+                                        dict(sorted(meta_synergy.items(), key=lambda x: (
+                                            'unique' in x[1]['sequence'],  
+                                            x[1]['number']
+                                        ), reverse=True))
+                                    )
             data.append(meta_data)
 
         if data == []:
