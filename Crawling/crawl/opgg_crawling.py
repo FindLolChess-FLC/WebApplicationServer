@@ -38,16 +38,19 @@ def opgg_crawling():
 
         for index, champion in enumerate(detail_champion, 1):
             
+            # 챔피언이 있으면 위치 추출
             if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 2:
                 name = champion.find_element(By.CLASS_NAME, 'css-1vg5gno').text
                 location[name] = index
 
+                # 아이템 추출
                 if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
                     detail_item = []
                     for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
                         detail_item.append(champ_item.get_attribute('alt'))
                     item[name] = detail_item
 
+                # 별 추출
                 if champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span'):
                     star[name] = len(champion.find_elements(By.CSS_SELECTOR, 'div.hexagon-star > span'))
                 else:
