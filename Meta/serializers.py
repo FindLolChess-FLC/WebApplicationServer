@@ -103,19 +103,23 @@ class LolMetaChampionSerializer(serializers.ModelSerializer):
 
 # 롤 메타
 class LolMetaSerializer(serializers.ModelSerializer):
-    champions = LolMetaChampionSerializer(source='lolmetachampion_set', many=True) 
+    champions = serializers.SerializerMethodField()
 
     class Meta:
         model = LolMeta
-        fields = ['id', 'title', 'like_count', 'dislike_count', 'reroll_lv','champions'] 
+        fields = ['id', 'title', 'like_count', 'dislike_count', 'reroll_lv', 'champions']
+
+    def get_champions(self, instance):
+        lol_meta_champions = instance.lolmetachampion_set.all().select_related('champion').order_by('champion__price')
+        return LolMetaChampionSerializer(lol_meta_champions, many=True).data
 
     # 응답 커스텀
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        
-        if not instance.lolmetachampion_set.exists(): 
-            representation.pop('lol_meta_champions')
-        
+
+        if not instance.lolmetachampion_set.exists():
+            representation.pop('champions', None)
+
         return representation
     
 

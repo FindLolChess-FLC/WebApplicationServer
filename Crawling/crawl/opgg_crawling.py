@@ -1,19 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from Meta.models import * 
 
-def reroll_lv(level):
-    if level == 1:
-        return 5
-    elif level == 2:
-        return 6
-    elif level == 3:
-        return 7
-    else:
-        return 8
-    
 # op.gg 크롤링
 def opgg_crawling():
     url = 'https://tft.op.gg/meta-trends/comps'
@@ -26,7 +14,6 @@ def opgg_crawling():
     crawl_meta = driver.find_elements(By.CLASS_NAME, 'css-1ywivro')
     meta_title = []
     meta_champ = []
-    meta_detail = []
     meta_champ_location = []
     meta_champ_item = []
     meta_champ_star = []
@@ -51,24 +38,35 @@ def opgg_crawling():
 
         for index, champion in enumerate(detail_champion, 1):
             
+            # 챔피언이 있으면 위치 추출
             if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 2:
                 name = champion.find_element(By.CLASS_NAME, 'css-1vg5gno').text
                 location[name] = index
 
-                # if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
-                #     for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
-                #         item[name] = champ_item.get_attribute('alt')
+                # 아이템 추출
+                if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
+                    detail_item = []
+                    for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
+                        detail_item.append(champ_item.get_attribute('alt'))
+                    item[name] = detail_item
 
+                # 별 추출
                 if champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span'):
                     star[name] = len(champion.find_elements(By.CSS_SELECTOR, 'div.hexagon-star > span'))
-                    print(len(champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span')))
                 else:
                     star[name] = 2
-                    print(2)
 
         meta_champ_location.append(location)
         meta_champ_item.append(item)
         meta_champ_star.append(star)
 
-    print(meta_champ_star)
- 
+    # 최종 메타 데이터 구성
+    for num in range(len(meta_title)):
+        meta_data[meta_title[num]] = {
+            '챔프': meta_champ[num],
+            '별': meta_champ_star[num],
+            '위치': meta_champ_location[num],
+            '아이템': meta_champ_item[num]
+        }
+    
+    return meta_data

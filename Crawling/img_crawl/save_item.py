@@ -1,30 +1,11 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+
+from Crawling.utils import item_translation
+
 import requests
 import os
 import re
-
-def item_translation(data):
-    if data == 'BFSword':
-        return 'B.F.대검'
-    elif data == 'RecurveBow':
-        return '곡궁'
-    elif data == 'ChainVest':
-        return '쇠사슬 조끼'
-    elif data == 'NegatronCloak':
-        return '음전자 망토'
-    elif data == 'NeedlesslyLargeRod':
-        return '쓸데없이 큰 지팡이'
-    elif data == 'TearOfTheGoddess':
-        return '여신의 눈물'
-    elif data == 'GiantsBelt':
-        return '거인의 허리띠'
-    elif data == 'SparringGloves':
-        return '연습용 장갑'
-    elif data == 'Spatula':
-        return '뒤집개'
-    elif data == 'FryingPan':
-        return '프라이팬'
 
 def save_item_img(name, img):
     save_directory = 'tft\아이템'
