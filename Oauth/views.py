@@ -111,21 +111,14 @@ class GoogleSigInView(APIView):
                 user.save()
                     
             token = SignInSerializer.get_token(user)
-            access_token = str(token.access_token)
-
-            uri = config('GOOGLE_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
-            message = f"&message={data['message']}" if 'message' in data else ''
-            redirect_url = f'{uri}{nickname}{message}'
-            
+            access_token = str(token.access_token) 
             cache.set(user.email, {'access': access_token})
 
+            uri = config('GOOGLE_REDIRECT_URI2')
+            nickname = f"&nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}?token={access_token}{nickname}{message}'
             response = redirect(redirect_url)
-            response.set_cookie(
-                key='token',
-                value=access_token,
-                httponly=False,
-            )
 
             return response
         else:
@@ -224,20 +217,13 @@ class KakaoSigninView(APIView):
 
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
-
-            uri = config('KAKAO_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
-            message = f"&message={data['message']}" if 'message' in data else ''
-            redirect_url = f'{uri}{nickname}{message}'
-
             cache.set(user.email, {'access': access_token})
 
+            uri = config('KAKAO_REDIRECT_URI2')
+            nickname = f"&nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}?token={access_token}{nickname}{message}'
             response = redirect(redirect_url)
-            response.set_cookie(
-                key='token',
-                value=access_token,
-                httponly=False,
-            )
 
             return response
         else:
@@ -336,20 +322,13 @@ class NaverSigninView(APIView):
 
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
-
-            uri = config('KAKAO_REDIRECT_URI2')
-            nickname = f"?nickname={data['nickname']}" if 'nickname' in data else ''
-            message = f"&message={data['message']}" if 'message' in data else ''
-            redirect_url = f'{uri}{nickname}{message}'
-            
             cache.set(user.email, {'access': access_token})
 
+            uri = config('NAVER_REDIRECT_URI2')
+            nickname = f"&nickname={data['nickname']}" if 'nickname' in data else ''
+            message = f"&message={data['message']}" if 'message' in data else ''
+            redirect_url = f'{uri}?token={access_token}{nickname}{message}'
             response = redirect(redirect_url)
-            response.set_cookie(
-                key='token',
-                value=access_token,
-                httponly=False,
-            )
 
             return response
         else:
