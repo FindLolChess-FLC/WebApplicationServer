@@ -122,7 +122,6 @@ def lolchess_crawling():
             if len(champ_item) > 0 :
                 for item in champ_item:
                     if Item.objects.filter(name=item).exists():
-                        print(Item.objects.filter(name=item).first())
                         champion.item.add(Item.objects.filter(name=item).first())
 
         max_value = max(champ_star.values())
