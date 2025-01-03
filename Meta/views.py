@@ -333,12 +333,13 @@ class MetaSearchView(APIView):
             meta_synergy = {}
 
             for champion in meta_champion:
-                champ_synergy = champion['champion']['synergy']
-
-                for synergy in champ_synergy:
-                    if synergy not in meta_synergy:
-                        meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                    meta_synergy[synergy]['number'] += 1
+                champ_synergy = champion['champion'].get('synergy')
+                
+                if champ_synergy:
+                    for synergy in champ_synergy:
+                        if synergy not in meta_synergy:
+                            meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
+                        meta_synergy[synergy]['number'] += 1
 
                 if 'item' in champion:
                     champ_item = champion['item']
