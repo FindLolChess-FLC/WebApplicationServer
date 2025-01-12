@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
         lolchess_duplicate_keys = set()
         opgg_duplicate_keys = set()
+        non_duplicate_keys = []
 
         for lc_key, lc_value in lolchess.items():
             for op_key, op_value in opgg.items():
@@ -19,12 +20,17 @@ class Command(BaseCommand):
                     lolchess_duplicate_keys.add(lc_key)
                     opgg_duplicate_keys.add(op_key)
                     break 
+                elif lc_key == op_key:
+                    non_duplicate_keys.append(op_key)
 
         for lol_key in lolchess_duplicate_keys:
             del lolchess[lol_key]
 
         for op_key in opgg_duplicate_keys:
             del opgg[op_key]
+        
+        for key in non_duplicate_keys:
+            opgg[f'{key}2'] = opgg.pop(key)
         
         merge_meta_data = {**lolchess , **opgg}
         merge_duplicate_keys = set()
