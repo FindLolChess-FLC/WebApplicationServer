@@ -60,11 +60,10 @@ def lolchess_crawling():
 
         for champ in detail:
             champ_text = champ.text.replace(' ', '')
+            detail_meta_champ.append(champ_text)
 
             # 챔피언 이름이 공백이 아닌 경우에만 처리
             if champ_text:
-                detail_meta_champ.append(champ_text)
-
                 # 아이템 추출
                 img_elements = champ.find_elements(By.TAG_NAME, 'img')
                 if img_elements:  # img 태그가 있을 경우에만 처리
@@ -84,7 +83,7 @@ def lolchess_crawling():
                         len(star.find_elements(By.TAG_NAME, 'div')) for star in star_elements
                     )
 
-        meta_champ.append(detail_meta_champ)
+        meta_champ.append([champ for champ in detail_meta_champ if champ])
 
         # 챔프 위치 정보 추출
         meta_champ_location.append(
