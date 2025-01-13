@@ -5,6 +5,8 @@ from rest_framework.views import APIView
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
 from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
 from django.utils import timezone
+from django.db.models import F
+
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
@@ -238,6 +240,15 @@ class MetaSearchView(APIView):
         operation_summary='전체 메타 조회',
         operation_id='메타_전체메타',
         tags=['메타'],
+        manual_parameters=[
+            openapi.Parameter(
+                'type',
+                openapi.IN_QUERY,
+                description='type:best는 선호도가 가장 높은 상위 3개의 데이터를 반환하며, 타입이 없을 경우 전체 데이터를 반환합니다.',
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
         responses={
             200: openapi.Response(
                 description='성공적으로 메타 정보를 조회했습니다.',
@@ -246,8 +257,19 @@ class MetaSearchView(APIView):
         }
     )
 
-    def get(self, requeset):
-        metas = LolMeta.objects.all().order_by('id')
+    def get(self, request):
+        type = request.query_params.get('type')
+
+        if type == 'best':
+            metas = (
+                    LolMeta.objects
+                    .filter(like_count__gte=F('dislike_count')) 
+                    .order_by('-like_count') 
+                    [:3] 
+                    )
+        else:
+            metas = LolMeta.objects.all().order_by('id')
+
         meta_champions = LolMetaChampion.objects.all()
         data = []
 
@@ -316,7 +338,7 @@ class MetaSearchView(APIView):
             )
         }
     )
-
+    
     def post(self, request):
         search_data = request.data['data'].split(',')
         
@@ -923,3 +945,4 @@ class DeleteCommentView(APIView):
             return Response({'resultcode': 'SUCCESS', 'message': '댓글 삭제가 완료되었습니다.'},status=status.HTTP_200_OK)
         
         return Response({'resultcode': 'FAIL', 'message': '잘못된 접근입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+    
