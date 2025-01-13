@@ -98,7 +98,7 @@ class LolMetaChampion(models.Model):
     champion = models.ForeignKey(Champion, on_delete=models.CASCADE)
     star = models.IntegerField()  
     location = models.IntegerField() 
-    item = models.ManyToManyField(Item)
+    item = models.ManyToManyField(Item, blank=True)
 
     def __str__(self):
         return f'{self.meta.title} - {self.champion.name}'
