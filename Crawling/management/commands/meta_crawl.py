@@ -54,7 +54,10 @@ class Command(BaseCommand):
         meta_data = merge_meta_data
 
         for data in meta_data:
-            meta, craeted = LolMeta.objects.get_or_create(title = data)
+            meta, created = LolMeta.objects.get_or_create(title = data)
+            
+            if not created:
+                continue
 
             champ_star = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0} 
             for champ_name in meta_data[data]['챔프']:
