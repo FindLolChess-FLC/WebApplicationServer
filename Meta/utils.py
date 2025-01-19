@@ -28,6 +28,6 @@ def find_db(data):
             Q(lolmetachampion__champion__name=keyword) | Q(lolmetachampion__champion__name=keyword.replace(' ', '')) |
             Q(lolmetachampion__champion__synergy__name=keyword) |  Q(lolmetachampion__champion__synergy__name=keyword.replace(' ', '')) |
             Q(title=keyword.strip()) | Q(title=keyword.replace(' ', ''))
-        )
+        ).order_by('-like_count')
 
     return [lol_meta for lol_meta in results.distinct()] 

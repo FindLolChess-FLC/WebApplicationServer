@@ -268,7 +268,7 @@ class MetaSearchView(APIView):
                     [:3] 
                     )
         else:
-            metas = LolMeta.objects.all().order_by('id')
+            metas = LolMeta.objects.all().order_by('-like_count')
 
         meta_champions = LolMetaChampion.objects.all()
         data = []
