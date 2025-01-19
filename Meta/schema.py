@@ -4,6 +4,8 @@ lol_meta_schema = openapi.Schema(
     type=openapi.TYPE_OBJECT,
     properties={
         "count": openapi.Schema(type=openapi.TYPE_INTEGER, description="전체 데이터 개수", example=38),
+        "previous_page_url": openapi.Schema(type=openapi.TYPE_STRING, description="이전 페이지 URL, 없으면 null입니다.", example="null"),
+        "next_page_url": openapi.Schema(type=openapi.TYPE_STRING, description="다음 페이지 URL, 없으면 null입니다.", example="http://url/meta/metasearch/?page=2"),
         "page": openapi.Schema(type=openapi.TYPE_INTEGER, description="현재 페이지 번호", example=1),
         "page_size": openapi.Schema(type=openapi.TYPE_INTEGER, description="페이지당 데이터 수", example=10),
         "total_pages": openapi.Schema(type=openapi.TYPE_INTEGER, description="전체 페이지 수", example=4),

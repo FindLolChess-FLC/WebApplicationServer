@@ -243,6 +243,8 @@ class MetaPagination(PageNumberPagination):
     def get_paginated_response(self, data):
         return Response({
             'count': self.page.paginator.count,  
+            'previous_page_url': self.get_previous_link(),
+            'next_page_url': self.get_next_link(),   
             'page': self.page.number,  
             'page_size': self.page_size,  
             'total_pages': self.page.paginator.num_pages,  
