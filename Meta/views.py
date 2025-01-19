@@ -1,6 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
 from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
@@ -233,6 +234,23 @@ class AugmenterSearchView(APIView):
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
 
 
+# 커스텀 페이지네이션
+class MetaPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size' 
+    max_page_size = 100 
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,  
+            'page': self.page.number,  
+            'page_size': self.page_size,  
+            'total_pages': self.page.paginator.num_pages,  
+            'resultcode': 'SUCCESS',
+            'data': data,
+    })
+
+
 # 메타 조회
 class MetaSearchView(APIView):
     @swagger_auto_schema(
@@ -246,6 +264,20 @@ class MetaSearchView(APIView):
                 openapi.IN_QUERY,
                 description='type:best는 선호도가 가장 높은 상위 3개의 데이터를 반환하며, 타입이 없을 경우 전체 데이터를 반환합니다.',
                 type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description='요청할 페이지 번호입니다. 기본값은 1입니다.',
+                type=openapi.TYPE_INTEGER,
+                required=False
+            ),
+            openapi.Parameter(
+                'page_size',
+                openapi.IN_QUERY,
+                description='한 페이지에 포함될 항목 수를 지정합니다. 기본값은 10입니다.',
+                type=openapi.TYPE_INTEGER,
                 required=False
             )
         ],
@@ -268,12 +300,15 @@ class MetaSearchView(APIView):
                     [:3] 
                     )
         else:
-            metas = LolMeta.objects.all().order_by('id')
+            metas = LolMeta.objects.all().order_by('-like_count')
 
+        paginator = MetaPagination()
+        paginated_metas = paginator.paginate_queryset(metas, request)
+    
         meta_champions = LolMetaChampion.objects.all()
         data = []
 
-        for meta in metas:
+        for meta in paginated_metas:
             meta_data = {
                 'meta': LolMetaSerializer(meta).data,
                 'synergys': []
@@ -308,7 +343,7 @@ class MetaSearchView(APIView):
                                     )
             data.append(meta_data)
 
-        return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
+        return paginator.get_paginated_response(data)
     
     @swagger_auto_schema(
         operation_description='메타 조회',
