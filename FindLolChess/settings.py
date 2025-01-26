@@ -94,7 +94,7 @@ ROOT_URLCONF = 'FindLolChess.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'User/pw_templates',],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
