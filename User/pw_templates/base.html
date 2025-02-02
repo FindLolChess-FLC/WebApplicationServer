@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/FLC_FAVICON" type="image/x-icon">
+    <title>Find Lol Chess</title>
+    {% block styles %}
+    <style>
+        html, body, div, span, applet, object, iframe,
+        h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+        a, abbr, acronym, address, big, cite, code,
+        del, dfn, em, img, ins, kbd, q, s, samp,
+        small, strike, strong, sub, sup, tt, var,
+        b, u, i, center,
+        dl, dt, dd, ol, ul, li,
+        fieldset, form, label, legend,
+        table, caption, tbody, tfoot, thead, tr, th, td,
+        article, aside, canvas, details, embed, 
+        figure, figcaption, footer, header, hgroup, 
+        menu, nav, output, ruby, section, summary,
+        time, mark, audio, video {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-size: 100%;
+            font: inherit;
+            vertical-align: baseline;
+            overflow: hidden;
+        }
+
+        article, aside, details, figcaption, figure, 
+        footer, header, hgroup, menu, nav, section {
+            display: block;
+        }
+        body {
+            line-height: 1;
+        }
+        ol, ul {
+            list-style: none;
+        }
+        blockquote, q {
+            quotes: none;
+        }
+        blockquote:before, blockquote:after,
+        q:before, q:after {
+            content: '';
+            content: none;
+        }
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        input[type="submit"] {
+            cursor: pointer;
+        }
+        .errorlist > li {
+            color: #FE2E00;
+            font-family: Inter;
+            font-size: 0.58125rem;
+            font-style: normal;
+            font-weight: 300;
+            line-height: normal;
+        }
+        body {
+            height: 100vh;
+            background: #F9FAFC;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 4.8125rem;
+            background: #FFF;
+            box-shadow: 0px 0.5px 3px 0px rgba(53, 53, 53, 0.17);
+            flex-shrink: 0;
+            padding-left: 11.945%;
+        }
+        header > a {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            text-decoration: none;
+        }
+        h1 {
+            color: #000;
+            font-family: Sansation;
+            font-size: 1.375rem;
+            font-style: normal;
+            font-weight: 700;
+            line-height: normal;
+            letter-spacing: -0.004125rem;
+        }
+        img {
+            width: 2.06rem;
+            height: 2.06rem;
+        }
+        main {
+            height: calc(100% - 4.8125rem);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <header>
+        <a href="https://www.findlolchess.kro.kr/">
+            <img src="https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/FLC_LOGO" alt="FLC">
+            <h1>Find Lol Chess</h1>
+        </a>
+    </header>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>
