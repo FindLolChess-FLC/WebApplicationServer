@@ -45,4 +45,5 @@ urlpatterns = [
     path('user/', include('User.urls')),
     path('meta/', include('Meta.urls')),
     path('oauth/', include('Oauth.urls')),
+    path('policy/', include('Policy.urls')),
 ]

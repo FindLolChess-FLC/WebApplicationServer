@@ -1,0 +1,134 @@
+
+{% extends "policy_base.html" %}
+{% block styles %}
+  {{ block.super }}
+    <style>
+        section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 3.6875rem;
+            width: 50.5rem;
+        }
+        h2 {
+            color: #000;
+            text-align: center;
+            font-family: "Noto Sans KR";
+            font-size: 3.25rem;
+            font-style: normal;
+            font-weight: 500;
+            line-height: normal;
+            letter-spacing: -0.00975rem;
+            margin-bottom: 2.125rem;
+        }
+        .title {
+            margin: 8.25rem 0 8rem 0;
+            width: 50.5rem;
+        }
+        small, li {
+            color: #6C6C6C;
+            font-family: "Noto Sans KR";
+            font-size: 0.865rem;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 148%;
+            letter-spacing: -0.002625rem;
+        }
+        h3 {
+            margin-bottom: 2rem;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+        <div class="title">
+            <h2>이용약관</h2>
+        </div>
+        
+        <section>
+            <h3>제 1조(목적)</h3>
+            <small>이 약관은 FLC-FindLolChess(이하 "회사")가 제공하는 서비스(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.</small>
+        </section>
+
+        <section>
+            <h3>제 2조 (용어의 정의)</h3>
+            <ol>
+                <li>"서비스"란 회사가 제공하는 모든 온라인 플랫폼 및 관련 서비스를 의미합니다.</li>
+                <li>"이용자"란 본 약관에 동의하고 회사가 제공하는 서비스를 이용하는 회원 및 비회원 모두를 의미합니다.</li>
+                <li>"회원"이란 회사에 개인정보(이메일, 닉네임)를 제공하여 회원 등록을 완료하고 서비스를 이용하는 자를 의미합니다.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>제 3조 (약관의 효력 및 변경)</h3>
+            <ol>
+                <li>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 공지함으로써 효력이 발생합니다.</li>
+                <li>회사는 필요한 경우 관련 법령을 위배하지 않는 범위 내에서 약관을 변경할 수 있으며, 변경된 약관은 제1항과 같은 방법으로 공지합니다.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>제 4조 (개인정보 수집 및 이용)</h3>
+            <ol>
+                <li>회사는 서비스 제공을 위해 최소한의 개인정보인 이메일과 닉네임만을 수집합니다.</li>
+                <li>회사는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다.</li>
+                <li>수집된 개인정보는 다음의 목적을 위해 이용됩니다.</li>
+            </ol>
+            <ul>
+                <li>서비스 제공 및 운영</li>
+                <li>회원 관리 및 본인 확인</li>
+            </ul>
+
+        </section>
+
+        <section>
+            <h3>제 5조 (이용자의 의무)</h3>
+            <ol>
+                <li>이용자는 등록한 개인정보가 정확하고 최신의 정보임을 보장해야 합니다.</li>
+                <li>이용자는 본 약관 및 관련 법령을 준수해야 하며, 다음 행위를 해서는 안 됩니다</li>
+            </ol>
+            <ul>
+                <li>타인의 개인정보 도용</li>
+                <li>서비스 운영을 방해하거나 불법적인 목적으로 서비스 이용</li>
+                <li>회사 및 제3자의 지식재산권 침해</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 6조 (서비스의 제공 및 변경)</h3>
+            <ol>
+                <li>회사는 이용자에게 안정적인 서비스를 제공하기 위해 최선을 다합니다.</li>
+                <li>회사는 서비스 운영상 또는 기술상의 이유로 서비스의 내용을 변경하거나 중단할 수 있으며, 이 경우 사전 공지합니다. </li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>제 7조 (서비스 이용의 제한 및 중지)</h3>
+            <ol>
+                <li>회사는 서비스 이용 제한 또는 중지로 인해 발생한 손해에 대해 책임지지 않습니다. </li>
+                <li>회사는 다음과 같은 경우 서비스 이용을 제한하거나 중지할 수 있습니다</li>
+            </ol>
+            <ul>
+                <li>시스템 점검, 보수 또는 기타 불가피한 사유가 있는 경우</li>
+                <li>이용자가 본 약관을 위반한 경우</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 8조 (면책조항)</h3>
+            <ol>
+                <li>사는 천재지변, 불가항력적 사유 등으로 인한 서비스 장애에 대해 책임을 지지 않습니다.</li>
+                <li>회사는 이용자의 귀책사유로 인한 서비스 이용 장애에 대해 책임을 지지 않습니다.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>제 9조 (준거법 및 관할법원)</h3>
+            <ol>
+                <li>본 약관은 대한민국 법률에 따라 해석되고 적용됩니다.</li>
+                <li>
+                    서비스 이용과 관련하여 회사와 이용자 간에 발생한 분쟁에 대해서는 회사의 본사 소재지를 관할하는 법원을 전속 관할 법원으로 합니다. 부칙 본 약관은 2025년 2월 3일부터 시행됩니다.
+                </li>
+            </ol>
+        </section>
+{% endblock %}
+

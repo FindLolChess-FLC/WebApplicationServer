@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'Crawling',
     'Meta',
     'Oauth',
+    'Policy',
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -94,7 +95,7 @@ ROOT_URLCONF = 'FindLolChess.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'User/pw_templates',],
+        'DIRS': [BASE_DIR / 'User/templates',  BASE_DIR / 'policy/templates',],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
