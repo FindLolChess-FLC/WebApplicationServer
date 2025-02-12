@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://res.cloudinary.com/dcc862pgc/image/upload/v1738505648/FLC_FAVICON_V2.ico" type="image/x-icon">
+    <title>Find Lol Chess</title>
+    {% block styles %}
+    <style>
+        html, body, div, span, applet, object, iframe,
+        h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+        a, abbr, acronym, address, big, cite, code,
+        del, dfn, em, img, ins, kbd, q, s, samp,
+        small, strike, strong, sub, sup, tt, var,
+        b, u, i, center,
+        dl, dt, dd,
+        fieldset, form, label, legend,
+        table, caption, tbody, tfoot, thead, tr, th, td,
+        article, aside, canvas, details, embed, 
+        figure, figcaption, footer, header, hgroup, 
+        menu, nav, output, ruby, section, summary,
+        time, mark, audio, video {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-size: 100%;
+            font: inherit;
+            vertical-align: baseline;
+        }
+
+        article, aside, details, figcaption, figure, 
+        footer, header, hgroup, menu, nav, section {
+            display: block;
+        }
+        body {
+            line-height: 1;
+        }
+        blockquote, q {
+            quotes: none;
+        }
+        blockquote:before, blockquote:after,
+        q:before, q:after {
+            content: '';
+            content: none;
+        }
+        
+        ul, ol {
+            padding-left: 0.9375rem;
+            margin: 0;
+        }
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        input[type="submit"] {
+            cursor: pointer;
+        }
+        .errorlist > li {
+            color: #FE2E00;
+            font-family: Inter;
+            font-size: 0.58125rem;
+            font-style: normal;
+            font-weight: 300;
+            line-height: normal;
+        }
+        body {
+            height: 100vh;
+            background: #F9FAFC;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 3.9125rem;
+            background: #FFF;
+            box-shadow: 0 0.03125rem 0.1875rem 0 rgba(53, 53, 53, 0.17);
+            flex-shrink: 0;
+            padding-left: 11.945%;
+        }
+        h1 {
+            color: #000;
+            font-family: Sansation;
+            font-size: 1.375rem;
+            font-style: normal;
+            font-weight: 700;
+            line-height: normal;
+            letter-spacing: -0.004125rem;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header > a {
+            height: 2.1875rem;
+            display: flex;
+            align-items: center;
+        }
+        img {
+            height: 75%;
+        }
+
+        .footer {
+            position: relative;
+            background: #242424;
+            height: 12.5rem;
+        }
+
+        .footer-main {
+            width: calc(100% - 15rem);
+            margin: auto;
+        }
+
+        .footer-contents {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+            padding: 1.9375rem 0 0.625rem;
+            border-bottom: 0.0625rem solid #7c7c7c;
+        }
+
+        .footer-contents h1 {
+            color: #FFF;
+            font-family: Pretendard;
+            font-size: 1.5375rem;
+            font-style: normal;
+            font-weight: 700;
+            line-height: normal;
+            letter-spacing: -0.004625rem;
+        }
+
+        .footer-copyright {
+            color: #7C7C7C;
+            font-family: Pretendard;
+            font-size: 0.625rem;
+            font-style: normal;
+            font-weight: 600;
+            line-height: 1.125rem;
+        }
+
+        .footer-event {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9375rem 0;
+        }
+
+        .footer-policy {
+            display: flex;
+            gap: 1.625rem;
+        }
+
+        .footer-policy a {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .footer-policy a:hover {
+            text-decoration: underline;
+        }
+
+        .privacy {
+            color: #FFF;
+            font-family: Pretendard;
+            font-size: 0.75rem;
+            font-style: normal;
+            font-weight: 700;
+            line-height: normal;
+            letter-spacing: -0.00225rem;
+        }
+        .service {
+            color: #FFF;
+            font-family: Pretendard;
+            font-size: 0.75rem;
+            font-style: normal;
+            font-weight: 300;
+            line-height: normal;
+            letter-spacing: -0.00225rem;
+        }
+        .footer-social {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .email-icon,
+        .instagram-icon {
+            width: 2rem;
+            height: 2rem;
+            cursor: pointer;
+            display: block;
+            background-size: cover;
+        }
+
+        .email-icon {
+            background-image: url("https://res.cloudinary.com/dcc862pgc/image/upload/v1739360274/email_empty.svg");
+        }
+
+        .email-icon:hover {
+            background-image: url("https://res.cloudinary.com/dcc862pgc/image/upload/v1739360274/email_fill.svg");
+        }
+
+        .instagram-icon {
+            background-image: url("https://res.cloudinary.com/dcc862pgc/image/upload/v1739360275/instagram_empty.svg");
+        }
+
+        .instagram-icon:hover {
+            background-image: url("https://res.cloudinary.com/dcc862pgc/image/upload/v1739360275/instagram_fill.svg");
+        }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <header>
+        <a href="https://www.findlolchess.kro.kr/">
+            <img src="https://res.cloudinary.com/dcc862pgc/image/upload/v1738505647/FLC_LOGO_V2.svg" alt="FLC">
+        </a>
+    </header>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    <footer class="footer">
+        <div class="footer-main">
+            <div class="footer-contents">
+                <h1>Find Lol Chess</h1>
+                <div class="footer-copyright">
+                    <p>© FindLolChess. All Rights Reserved.</p>
+                    <p>
+                        FindLolChess isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the views or opinions 
+                        of Riot Games or anyone officially involved in producing or managing League of Legends.
+                    </p>
+                    <p>
+                        League of Legends and Riot Games are trademarks or registered trademarks of Riot Games, Inc.
+                        League of Legends © Riot Games, Inc.
+                    </p>
+                </div>
+            </div>
+            <div class="footer-event">
+                <div class="footer-policy">
+                    <a class="service" href="https://flc.servehttp.com/policy/service/" target="_blank">이용약관</a>
+                    <a class="privacy" href="https://flc.servehttp.com/policy/privacy/" target="_blank">개인정보처리방침</a>
+                </div>
+                <div class="footer-social">
+                    <a href="mailto:flc.findlolchess@gmail.com" class="email-icon"></a>
+                    <a href="https://www.instagram.com/flc.findlolchess/?igsh=N250cGFhYnFoY2dt" target="_blank" class="instagram-icon"></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

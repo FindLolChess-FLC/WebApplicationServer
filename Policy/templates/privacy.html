@@ -1,0 +1,109 @@
+
+{% extends "policy_base.html" %}
+{% block styles %}
+  {{ block.super }}
+    <style>
+        section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 3.6875rem;
+            width: 50.5rem;
+        }
+        h2 {
+            color: #000;
+            text-align: center;
+            font-family: "Noto Sans KR";
+            font-size: 3.25rem;
+            font-style: normal;
+            font-weight: 500;
+            line-height: normal;
+            letter-spacing: -0.00975rem;
+            margin-bottom: 2.125rem;
+        }
+        .title {
+            margin: 8.25rem 0 8rem 0;
+            width: 50.5rem;
+        }
+        small, li {
+            color: #6C6C6C;
+            font-family: "Noto Sans KR";
+            font-size: 0.865rem;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 148%;
+            letter-spacing: -0.002625rem;
+        }
+        h3 {
+            margin-bottom: 2rem;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+        <div class="title">
+            <h2>개인정보처리방침</h2>
+            <small>FLC-FindLolChess(이하 "회사")는 이용자의 개인정보 보호를 매우 중요시하며, 『개인정보 보호법』 등 관련 법령을 준수하고 있습니다. 본 개인정보 처리방침은 회사가 수집하는 개인정보의 항목, 수집 및 이용 목적, 보관 기간, 보호 조치 등에 대해 설명합니다.</small>
+        </div>
+        
+        <section>
+            <h3>제 1조 (수집하는 개인정보 항목)</h3>
+            <small>회사는 서비스 제공을 위해 최소한의 개인정보를 수집하며, 수집 항목은 다음과 같습니다.</small>
+            <ul>
+                <li>필수 항목: 이메일, 닉네임</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 2조 (개인정보 수집 및 이용 목적)</h3>
+            <small>수집한 개인정보는 다음의 목적을 위해 활용됩니다.</small>
+            <ul>
+                <li>회원 가입 및 관리</li>
+                <li>서비스 제공 및 운영</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 3조 (개인정보의 보유 및 이용 기간)</h3>
+            <small>회사는 개인정보 수집 및 이용 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 관련 법령에 따라 보존이 필요한 경우에는<br>법령이 정한 기간 동안 보관할 수 있습니다</small>
+        </section>
+
+        <section>
+            <h3>제 4조 (개인정보의 제3자 제공)</h3>
+            <small>회사는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 다만, 다음의 경우에는 예외로 합니다.</small>
+            <ul>
+                <li>법령의 규정에 의거하거나 수사 기관의 요청이 있는 경우</li>
+                <li>이용자가 사전에 동의한 경우</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 5조 (개인정보의 처리 위탁)</h3>
+            <small>회사는 원활한 서비스 제공을 위해 개인정보 처리를 외부에 위탁하지 않습니다. 만약 위탁이 필요한 경우 사전에 이용자에게<br>고지하고 동의를 받습니다.</small>
+        </section>
+
+        <section>
+            <h3>제 6조 (이용자 및 법정대리인의 권리와 행사 방법)</h3>
+            <small>이용자는 언제든지 본인의 개인정보를 조회하거나 수정할 수 있으며, 수집 및 이용에 대한 동의를 철회할 수 있습니다.<br>개인정보 열람, 수정, 삭제, 동의 철회 요청은 서비스 내 설정 메뉴 또는 고객 지원을 통해 가능합니다.</small>
+        </section>
+
+        <section>
+            <h3>제 7조 (개인정보의 파기 절차 및 방법)</h3>
+            <small>회사는 개인정보의 보유 기간이 경과하거나 처리 목적이 달성된 경우 지체 없이 파기합니다.<br>전자적 파일 형태의 개인정보는 복구 및 재생이 불가능한 방법으로 삭제하며, 종이 문서에 기록된 개인정보는 분쇄기로 파쇄하거나 소각합니다.</small>
+        </section>
+
+        <section>
+            <h3>제 8조 (개인정보의 안전성 확보 조치)</h3>
+            <small>회사는 개인정보 보호를 위해 다음과 같은 기술적, 관리적 보호 조치를 취하고 있습니다.</small>
+            <ul>
+                <li>개인정보 접근 제한 및 관리</li>
+                <li>데이터 암호화</li>
+                <li>개인정보 처리 직원의 최소화 및 교육</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>제 9조 (개인정보 처리방침 변경)</h3>
+            <small>본 개인정보 처리방침은 법령, 정책 또는 서비스 변경에 따라 수정될 수 있으며, 변경 시 사전에 공지합니다.<br> 부칙 본 개인정보 처리방침은 2025년 2월 3일부터 시행됩니다.</small>
+        </section>
+{% endblock %}
+
