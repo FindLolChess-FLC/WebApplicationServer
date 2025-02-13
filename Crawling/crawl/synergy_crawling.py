@@ -42,4 +42,4 @@ def synergy_crawling():
                                                                 effect=desc.text.replace('\n', ' ') + effect.text.replace('\n', ' '), 
                                                                 sequence=(sequence_data if sequence_data else [])
 )
-        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/시너지/{synergy_instance.name}.png")
+        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/시너지/{synergy_instance.name}.png")
