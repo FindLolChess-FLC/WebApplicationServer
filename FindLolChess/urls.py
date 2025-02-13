@@ -46,6 +46,6 @@ urlpatterns = [
     path('meta/', include('Meta.urls')),
     path('oauth/', include('Oauth.urls')),
     path('policy/', include('Policy.urls')),
-    path("google5347ff0a3681bfe2", TemplateView.as_view(template_name="google5347ff0a3681bfe2.html")),
+    path("google5347ff0a3681bfe2.html", TemplateView.as_view(template_name="google5347ff0a3681bfe2.html")),
 ]
 
