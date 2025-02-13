@@ -26,15 +26,15 @@ def augmenter_crawling():
         for name, effect in zip(augment_names, augment_effects):
             if tier == 'silver' :
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ''), tier='Silver')
-                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/실버/{augment_instance.name}.png")
+                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/실버/{augment_instance.name}.png")
             elif tier == 'gold':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='Gold')
                 if ':' in augment_instance.name:
                     AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name.replace(':', '')}.png?invalidate=true")
                 else:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name}.png")
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/골드/{augment_instance.name}.png")
             elif tier == 'prismatic':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='prism')
-                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/프리즘/{augment_instance.name}.png")
+                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/프리즘/{augment_instance.name}.png")
 
     driver.quit()

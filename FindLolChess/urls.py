@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import path, include, re_path
+from django.views.generic import TemplateView
 from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -46,4 +47,6 @@ urlpatterns = [
     path('meta/', include('Meta.urls')),
     path('oauth/', include('Oauth.urls')),
     path('policy/', include('Policy.urls')),
+    path("google5347ff0a3681bfe2", TemplateView.as_view(template_name="google5347ff0a3681bfe2.html")),
 ]
+
