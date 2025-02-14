@@ -8,6 +8,7 @@ from selenium.webdriver.firefox.options import Options
 import re
 import itertools
 from Meta.models import Item, ItemImg
+from Crawling.utils import get_img_src
 
 # 조합 아이템 번역
 def item_translation(data):
@@ -52,6 +53,8 @@ def item_crawling():
 
     act = ActionChains(driver)
 
+    img_data = get_img_src('아이템')
+
     for index, item in enumerate(item_data):
         driver.execute_script("arguments[0].scrollIntoView();", item)
         act.move_to_element(item).click().perform()
@@ -67,10 +70,10 @@ def item_crawling():
             item2_data = item_translation(detail_item[1].lower())
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data[item_instance.name])
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data[item_instance.name])
 
     comb_url = 'https://lolchess.gg/items/set13/table'
     driver.get(comb_url)

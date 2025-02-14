@@ -3,7 +3,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from Meta.models import Synergy, SynergyImg
+from Crawling.utils import get_img_src
 import re
+
 
 # 시너지 정보 저장
 def synergy_crawling():
@@ -16,6 +18,8 @@ def synergy_crawling():
 
     synergy_type = ['bronze', 'silver', 'gold', 'chromatic']
     synergy_type_data = {}
+
+    img_data = get_img_src('시너지')
 
     for type in synergy_type:
         url = f'https://lolchess.gg/synergies/set13?type={type}'
@@ -49,4 +53,4 @@ def synergy_crawling():
                                                                 effect=desc.text.replace('\n', ' ') + effect.text.replace('\n', ' '), 
                                                                 sequence=(sequence_data if sequence_data else [])
 )
-        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/시너지/{synergy_instance.name}.png")
+        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=img_data[synergy_instance.name])

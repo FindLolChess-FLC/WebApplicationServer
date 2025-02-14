@@ -3,13 +3,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from Meta.models import Augmenter, AugmenterImg
+from Crawling.utils import get_img_src
 
 def augmenter_crawling():
     tier_data = ['silver', 'gold', 'prismatic']
+    img_src = ['실버', '골드', '프리즘']
 
-    for tier in tier_data:
+    for tier,src in zip(tier_data,img_src):
         url = f'https://lolchess.gg/augments/set13?type={tier}'
-        
+        img_data = get_img_src(f'증강/{src}')
+
         service = Service('/usr/local/bin/geckodriver')
         options = Options()
         options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
@@ -26,15 +29,23 @@ def augmenter_crawling():
         for name, effect in zip(augment_names, augment_effects):
             if tier == 'silver' :
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ''), tier='Silver')
-                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/실버/{augment_instance.name}.png")
+                if ':' in augment_instance.name:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name.replace(':','')])
+                else:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name])
+
             elif tier == 'gold':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='Gold')
                 if ':' in augment_instance.name:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/f_auto,q_auto/v1/tft/증강/골드/{augment_instance.name.replace(':', '')}.png?invalidate=true")
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name.replace(':','')])
                 else:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/골드/{augment_instance.name}.png")
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name])
+
             elif tier == 'prismatic':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='prism')
-                AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/증강/프리즘/{augment_instance.name}.png")
+                if ':' in augment_instance.name:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name.replace(':','')])
+                else:
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data[augment_instance.name])
 
     driver.quit()
