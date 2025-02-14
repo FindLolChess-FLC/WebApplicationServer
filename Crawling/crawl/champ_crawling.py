@@ -4,11 +4,13 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from Meta.models import Champion, Synergy, ChampionImg
 from django.db import transaction
+from Crawling.utils import get_img_src
+
 
 # 챔피언 정보 저장
 def champion_crawling():
     url = 'https://tft.op.gg/meta-trends/champion'
-
+    img_data = get_img_src('챔피언')
     service = Service('/usr/local/bin/geckodriver')
     options = Options()
     options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
@@ -26,7 +28,7 @@ def champion_crawling():
     for name, synergy, price in zip(champ_name_data, champ_synergy_data, champ_price_data):
         with transaction.atomic():
             champion_instance, created = Champion.objects.get_or_create(name=name.text.replace(' ', ''), price=price.text[1])
-            ChampionImg.objects.get_or_create(champion=champion_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/챔피언/{name.text.replace(' ','')}.png?invalidate=true")
+            ChampionImg.objects.get_or_create(champion=champion_instance, img_src=img_data[name.text.replace(' ','')])
             synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
             champion_instance.synergy.add(*synergy_instances)
         
