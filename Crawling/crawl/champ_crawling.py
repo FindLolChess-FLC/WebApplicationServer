@@ -21,9 +21,9 @@ def champion_crawling():
     driver.get(url)
     driver.implicitly_wait(10)
 
-    champ_name_data = driver.find_elements(By.CSS_SELECTOR,'div.css-19aklyh > div > table > tbody > tr > td.css-1gwaozl > a > div.champions-info > strong')
-    champ_synergy_data = driver.find_elements(By.CSS_SELECTOR, 'div.css-19aklyh > div > table > tbody > tr > td.css-1gwaozl > a > div.champions-info > ul')
-    champ_price_data = driver.find_elements(By.CSS_SELECTOR,'#__next > main > div > div.css-19aklyh > div > table > tbody > tr > td:nth-child(3)')
+    champ_name_data = driver.find_elements(By.CSS_SELECTOR,'td.css-1gwaozl > a > div.champions-info > strong')
+    champ_synergy_data = driver.find_elements(By.CSS_SELECTOR, 'td.css-1gwaozl > a > div.champions-info > ul')
+    champ_price_data = driver.find_elements(By.CSS_SELECTOR,'div.css-19aklyh > div > div > table > tbody > tr > td:nth-child(3)')
 
     for name, synergy, price in zip(champ_name_data, champ_synergy_data, champ_price_data):
         with transaction.atomic():
