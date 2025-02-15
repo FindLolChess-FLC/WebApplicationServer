@@ -61,10 +61,10 @@ def item_crawling():
             item2_data = item_translation(detail_item[1].lower())
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data[item_instance.name])
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data[item_instance.name])
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
 
     comb_url = 'https://lolchess.gg/items/set13/table'
     driver.get(comb_url)
@@ -81,6 +81,6 @@ def item_crawling():
         effect = act_data.find_element(By.TAG_NAME, 'p').text
         
         item_instance, created = Item.objects.get_or_create(name = kor_name, effect = effect)
-        ItemImg.objects.get_or_create(item=item_instance, img_src=f"https://res.cloudinary.com/dcc862pgc/image/upload/v1/tft/아이템/{item_instance.name.replace(' ','')}.png")
+        ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
         
     driver.quit()
