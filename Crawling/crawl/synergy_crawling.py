@@ -46,4 +46,4 @@ def synergy_crawling():
                                                                 effect=desc.text.replace('\n', ' ') + effect.text.replace('\n', ' '), 
                                                                 sequence=(sequence_data if sequence_data else [])
 )
-        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=img_data.get(synergy_instance.name, None))
+        SynergyImg.objects.get_or_create(synergy=synergy_instance, img_src=img_data.get(synergy_instance.name, 'empty'))
