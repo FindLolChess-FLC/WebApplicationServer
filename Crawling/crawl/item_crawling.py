@@ -70,10 +70,10 @@ def item_crawling():
             item2_data = item_translation(detail_item[1].lower())
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, 'empty'))
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, 'empty'))
 
     comb_url = 'https://lolchess.gg/items/set13/table'
     driver.get(comb_url)
@@ -91,6 +91,6 @@ def item_crawling():
         effect = act_data.find_element(By.TAG_NAME, 'p').text
         
         item_instance, created = Item.objects.get_or_create(name = kor_name, effect = effect)
-        ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, None))
+        ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, 'empty'))
         
     driver.quit()

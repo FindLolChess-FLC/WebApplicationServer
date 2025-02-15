@@ -30,22 +30,22 @@ def augmenter_crawling():
             if tier == 'silver' :
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text.replace('\n', ''), tier='Silver')
                 if ':' in augment_instance.name:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, 'empty'))
                 else:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, 'empty'))
 
             elif tier == 'gold':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='Gold')
                 if ':' in augment_instance.name:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, 'empty'))
                 else:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, 'empty'))
 
             elif tier == 'prismatic':
                 augment_instance, created = Augmenter.objects.get_or_create(name=name.text.replace(' ', ''), effect=effect.text, tier='prism')
                 if ':' in augment_instance.name:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name.replace(':','').name, 'empty'))
                 else:
-                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, None))
+                    AugmenterImg.objects.get_or_create(augmenter=augment_instance, img_src=img_data.get(augment_instance.name, 'empty'))
 
     driver.quit()
