@@ -28,7 +28,7 @@ def champion_crawling():
     for name, synergy, price in zip(champ_name_data, champ_synergy_data, champ_price_data):
         with transaction.atomic():
             champion_instance, created = Champion.objects.get_or_create(name=name.text.replace(' ', ''), price=price.text[1])
-            ChampionImg.objects.get_or_create(champion=champion_instance, img_src=img_data.get(champion_instance.name, None))
+            ChampionImg.objects.get_or_create(champion=champion_instance, img_src=img_data.get(champion_instance.name, 'empty'))
             synergy_instances = [synergy for synergy_name in (synergy.text).split('\n') for synergy in Synergy.objects.filter(name=synergy_name.replace(' ',''))]
             champion_instance.synergy.add(*synergy_instances)
         
