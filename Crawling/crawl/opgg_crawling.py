@@ -31,7 +31,7 @@ def opgg_crawling():
     for meta in crawl_meta:
         driver.execute_script("arguments[0].scrollIntoView(true);", meta)
         meta_title.append(meta.find_element(By.CSS_SELECTOR, 'a > div.css-k267f7 > div.top-info > div.basic-info > div.title > strong').text)
-        meta_champ.append([i.text for i in meta.find_elements(By.CSS_SELECTOR, 'a > div.css-1my6l2q > div.unit-list > div > div.square--size-semi-large.css-1be4v9m')])
+        meta_champ.append([champ.text for champ in meta.find_elements(By.CSS_SELECTOR, 'a > div.css-1my6l2q > div.unit-list > div > div.square--size-semi-large.css-1be4v9m')])
         
         act = ActionChains(driver)
         act.move_to_element(meta.find_element(By.CLASS_NAME, 'btn-detail')).click().perform()
