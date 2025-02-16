@@ -193,7 +193,7 @@ class KakaoSigninView(APIView):
             headers = {'Authorization': f'Bearer {access_token}'}
             user_response = requests.get('https://kapi.kakao.com/v2/user/me', headers=headers).json()
             email = user_response['kakao_account'].get('email')
-            nickname = user_response['kakao_account']['profile'].get('nickname')
+            nickname = user_response['kakao_account']['profile'].get('nickname',generate_unique_nickname('Guest'))
 
             data = {'email':email, 'access':access_token}
 
@@ -211,7 +211,7 @@ class KakaoSigninView(APIView):
                 user.set_unusable_password()
                 user.save()
 
-                if user_response['kakao_account']['profile'].get('nickname') != user.nickname:
+                if user_response['kakao_account']['profile'].get('nickname',generate_unique_nickname('Guest')) != user.nickname:
                     data['message'] = '닉네임이 중복되어 변경되었습니다.'
                 
 
@@ -303,7 +303,7 @@ class NaverSigninView(APIView):
             headers = {'Authorization': f'Bearer {access_token}'}
             user_response = requests.get('https://openapi.naver.com/v1/nid/me', headers=headers).json()
             email = user_response['response'].get('email')
-            nickname = user_response['response'].get('nickname')
+            nickname = user_response['response'].get('nickname',generate_unique_nickname('Guest'))
             data = {'email':email, 'access':access_token}
 
             try:
