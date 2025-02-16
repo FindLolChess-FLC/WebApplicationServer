@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import redirect
 from django.core.cache import cache
+from django.utils.crypto import get_random_string
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from decouple import config
@@ -92,7 +93,7 @@ class GoogleSigInView(APIView):
             headers = {'Authorization': f'Bearer {access_token}'}
             user_response = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers=headers).json()
             email = user_response.get('email')
-            nickname = user_response.get('name')
+            nickname = user_response.get('name') or generate_unique_nickname(get_random_string(5))
 
             data = {'email': email, 'access': access_token}
 
@@ -193,7 +194,7 @@ class KakaoSigninView(APIView):
             headers = {'Authorization': f'Bearer {access_token}'}
             user_response = requests.get('https://kapi.kakao.com/v2/user/me', headers=headers).json()
             email = user_response['kakao_account'].get('email')
-            nickname = user_response['kakao_account']['profile'].get('nickname',generate_unique_nickname('Guest'))
+            nickname = user_response['kakao_account']['profile'].get('nickname') or generate_unique_nickname(get_random_string(5))
 
             data = {'email':email, 'access':access_token}
 
@@ -210,10 +211,6 @@ class KakaoSigninView(APIView):
                 data['nickname'] = nickname
                 user.set_unusable_password()
                 user.save()
-
-                if user_response['kakao_account']['profile'].get('nickname',generate_unique_nickname('Guest')) != user.nickname:
-                    data['message'] = '닉네임이 중복되어 변경되었습니다.'
-                
 
             token = SignInSerializer.get_token(user)
             access_token = str(token.access_token)
@@ -303,7 +300,7 @@ class NaverSigninView(APIView):
             headers = {'Authorization': f'Bearer {access_token}'}
             user_response = requests.get('https://openapi.naver.com/v1/nid/me', headers=headers).json()
             email = user_response['response'].get('email')
-            nickname = user_response['response'].get('nickname',generate_unique_nickname('Guest'))
+            nickname = user_response['response'].get('nickname') or generate_unique_nickname(get_random_string(5))
             data = {'email':email, 'access':access_token}
 
             try:
