@@ -62,7 +62,7 @@ class ChampionSearchView(APIView):
                 return Response({'resultcode': 'FAIL', 'message': '해당하는 챔피언이 없습니다'}, status=status.HTTP_404_NOT_FOUND)
                 
         else:
-            champions = Champion.objects.all().order_by('id') 
+            champions = Champion.objects.all().order_by('price') 
             serializer = ChampionSerializer(champions, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
         
