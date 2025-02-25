@@ -12,7 +12,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from User.permission import IsAuthenticatedAndTokenVerified
-from .schema import lol_meta_schema
+from .schema import lol_meta_schema, champion_response_schema
 from .utils import find_db
 
 import re
@@ -65,6 +65,31 @@ class ChampionSearchView(APIView):
             champions = Champion.objects.all().order_by('-price') 
             serializer = ChampionSerializer(champions, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+        
+
+# 메타 사용 챔피언 조회
+class UseChampionSearchView(APIView):
+    @swagger_auto_schema(
+        operation_description='사용 챔피언 조회',
+        operation_summary='사용 챔피언 조회',
+        operation_id='기본_사용 챔피언',
+        tags=['기본'],
+        responses={
+            200: openapi.Response(
+                description='성공적으로 챔피언 정보를 조회했습니다.',
+                schema=champion_response_schema,
+            )
+        }
+    )
+
+    def get(self, request):
+        lol_meta_champions = LolMetaChampion.objects.all()
+        champions = []
+        for champ in lol_meta_champions:
+            if champ.champion.name not in champions:
+                champions.append(champ.champion.name)
+
+        return Response({'resultcode': 'SUCCESS', 'data': champions}, status=status.HTTP_200_OK)
         
 
 # 시너지 조회

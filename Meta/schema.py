@@ -96,3 +96,29 @@ lol_meta_schema = openapi.Schema(
         )
     }
 )
+
+champion_response_schema = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'data': openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(
+                type=openapi.TYPE_STRING,
+                example="바이올렛"
+            )
+        )
+    },
+    example={
+        "data": [
+            "바이올렛",
+            "다리우스",
+            "밴더",
+            "드레이븐",
+            "파우더",
+            "블라디미르",
+            "엘리스",
+            "스웨인",
+            "사이온"
+        ]
+    }
+)
