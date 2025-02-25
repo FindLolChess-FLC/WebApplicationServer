@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from Crawling.crawl.opgg_crawling import opgg_crawling
 from Crawling.crawl.lolchess_crawling import lolchess_crawling
+from Crawling.crawl.tactics_crawling import tactics_crawling
 from Crawling.utils import reroll_lv, jacaard_similarity
 from Meta.models import * 
 
@@ -9,6 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         lolchess = lolchess_crawling()
         opgg = opgg_crawling()
+        tactics = tactics_crawling()
 
         lolchess_duplicate_keys = set()
         opgg_duplicate_keys = set()
@@ -81,3 +83,4 @@ class Command(BaseCommand):
 
             meta.reroll_lv = reroll_lv(max(max_keys))
             meta.save()
+    
