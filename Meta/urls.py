@@ -3,6 +3,7 @@ from .views import *
 
 urlpatterns = [
     path('championsearch/', ChampionSearchView.as_view()), # 챔피언 조회
+    path('usechampionsearch/', UseChampionSearchView.as_view()), # 사용 챔피언 조회
     path('synergysearch/', SynergySearchView.as_view()), # 시너지 조회
     path('itemsearch/', ItemSearchView.as_view()), # 아이템 조회
     path('metasearch/', MetaSearchView.as_view()), # 메타 조회
