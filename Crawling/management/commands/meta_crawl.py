@@ -21,11 +21,11 @@ class Command(BaseCommand):
 
         if db_meta_data:
             for db_meta in db_meta_data:
-                db_meta_champion.append([meta_champ.champion.name for meta_champ in LolMetaChampion.objects.select_related('champion').filter(meta=db_meta)])
+                db_meta_champion.append([meta_champ.champion.name for meta_champ in LolMetaChampion.objects.select_related('champion').filter(meta=db_meta).order_by('champion__name')])
 
         for merge_key, merge_value in final_merged_data.items():
             for db_meta in db_meta_champion:
-                if jacaard_similarity(merge_value['챔프'], db_meta) == 1:
+                if jacaard_similarity(merge_value['챔프'].sort(), db_meta) == 1:
                     merge_duplicate_keys.add(merge_key)
                     break 
         
