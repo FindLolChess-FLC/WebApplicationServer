@@ -1,13 +1,19 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 import time
 
 def tactics_crawling():
-    driver = webdriver.Chrome()
     url = 'https://tactics.tools/ko/team-compositions'
+    
+    service = Service('/usr/local/bin/geckodriver')
+    options = Options()
+    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+    options.add_argument("--headless")
+    options.binary_location = '/usr/bin/firefox'
+    driver = webdriver.Firefox(service=service, options=options)
+
     driver.get(url)
 
     detail_meta_link = []
