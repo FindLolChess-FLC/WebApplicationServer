@@ -61,3 +61,30 @@ def get_img_src(folder_name):
         image_urls[resource['display_name']] = resource["secure_url"]
 
     return image_urls
+
+def remove_duplicates_data(data1:dict, data2:dict):
+    data1_duplicate_keys = set()
+    data2_duplicate_keys = set()
+    non_duplicate_keys = []
+
+    for d1_key, d1_value in data1.items():
+        for d2_key, d2_value in data2.items():
+            if jacaard_similarity(d1_value['챔프'], d2_value['챔프']) == 1:
+                data1_duplicate_keys.add(d1_key)
+                data2_duplicate_keys.add(d2_key)
+                break 
+            elif d1_key == d2_key:
+                non_duplicate_keys.append(d2_key)
+
+    for d1_key in data1_duplicate_keys:
+        del data1[d1_key]
+
+    for d2_key in data2_duplicate_keys:
+        del data2[d2_key]
+    
+    for key in non_duplicate_keys:
+        data2[f'{key}2'] = data2.pop(key)
+    
+    merge_meta_data = {**data1 , **data2}
+
+    return merge_meta_data
