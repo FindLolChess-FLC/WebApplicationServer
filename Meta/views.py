@@ -332,7 +332,6 @@ class MetaSearchView(APIView):
         paginator = MetaPagination()
         paginated_metas = paginator.paginate_queryset(metas, request)
     
-        meta_champions = LolMetaChampion.objects.all()
         data = []
 
         for meta in paginated_metas:
@@ -341,6 +340,8 @@ class MetaSearchView(APIView):
                 'synergys': []
             }
             meta_synergy = {}
+
+            meta_champions = LolMetaChampion.objects.filter(meta=meta)
 
             for meta_champion in meta_champions:
                 if meta.id == meta_champion.meta.id:
