@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from Crawling.crawl.opgg_crawling import opgg_crawling
 from Crawling.crawl.lolchess_crawling import lolchess_crawling
 from Crawling.crawl.tactics_crawling import tactics_crawling
-from Crawling.utils import reroll_lv, jacaard_similarity
+from Crawling.utils import reroll_lv, jacaard_similarity, remove_duplicates_data
 from Meta.models import * 
 
 class Command(BaseCommand):
@@ -12,29 +12,8 @@ class Command(BaseCommand):
         opgg = opgg_crawling()
         tactics = tactics_crawling()
 
-        lolchess_duplicate_keys = set()
-        opgg_duplicate_keys = set()
-        non_duplicate_keys = []
-
-        for lc_key, lc_value in lolchess.items():
-            for op_key, op_value in opgg.items():
-                if jacaard_similarity(lc_value['챔프'], op_value['챔프']) == 1:
-                    lolchess_duplicate_keys.add(lc_key)
-                    opgg_duplicate_keys.add(op_key)
-                    break 
-                elif lc_key == op_key:
-                    non_duplicate_keys.append(op_key)
-
-        for lol_key in lolchess_duplicate_keys:
-            del lolchess[lol_key]
-
-        for op_key in opgg_duplicate_keys:
-            del opgg[op_key]
-        
-        for key in non_duplicate_keys:
-            opgg[f'{key}2'] = opgg.pop(key)
-        
-        merge_meta_data = {**lolchess , **opgg}
+        first_merged_data = remove_duplicates_data(lolchess,opgg)
+        final_merged_data = remove_duplicates_data(first_merged_data,tactics)
         merge_duplicate_keys = set()
 
         db_meta_data = LolMeta.objects.all()
@@ -44,16 +23,16 @@ class Command(BaseCommand):
             for db_meta in db_meta_data:
                 db_meta_champion.append([meta_champ.champion.name for meta_champ in LolMetaChampion.objects.select_related('champion').filter(meta=db_meta)])
 
-        for merge_key, merge_value in merge_meta_data.items():
+        for merge_key, merge_value in final_merged_data.items():
             for db_meta in db_meta_champion:
                 if jacaard_similarity(merge_value['챔프'], db_meta) == 1:
                     merge_duplicate_keys.add(merge_key)
                     break 
         
         for merge_key in merge_duplicate_keys:
-            del merge_meta_data[merge_key]
+            del final_merged_data[merge_key]
 
-        meta_data = merge_meta_data
+        meta_data = final_merged_data
 
         for data in meta_data:
             meta, created = LolMeta.objects.get_or_create(title = data)

@@ -17,7 +17,7 @@ def lolchess_crawling():
     driver = webdriver.Firefox(service=service, options=options)
 
     driver.get(url)
-    driver.implicitly_wait(10)
+    driver.implicitly_wait(5)
     
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
