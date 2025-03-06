@@ -327,7 +327,7 @@ class MetaSearchView(APIView):
                     [:3] 
                     )
         else:
-            metas = LolMeta.objects.all().order_by('-like_count')
+            metas = LolMeta.objects.all().order_by('-like_count').distinct('id')
 
         paginator = MetaPagination()
         paginated_metas = paginator.paginate_queryset(metas, request)
