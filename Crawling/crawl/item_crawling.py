@@ -61,10 +61,12 @@ def item_crawling():
             item2_data = item_translation(detail_item[1].lower())
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, 'empty'))
+            print(img_data)
+            print(item_instance)
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
-            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name, 'empty'))
+            ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
 
     comb_url = 'https://lolchess.gg/items/set13/table'
     driver.get(comb_url)
