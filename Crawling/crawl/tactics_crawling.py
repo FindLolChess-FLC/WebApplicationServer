@@ -45,7 +45,7 @@ def tactics_crawling():
             star = champ.find_elements(By.TAG_NAME, 'svg')
 
             if item:
-                champ_item[name] = [item_name.get_attribute('alt').replace(' ','') for item_name in item]
+                champ_item[name] = [item_name.get_attribute('alt') for item_name in item]
 
             if star:
                 champ_star[name] = 3
