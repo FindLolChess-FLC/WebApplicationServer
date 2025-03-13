@@ -138,7 +138,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'lol_meta', 'writer', 'created_at', 'content']
+        fields = ['id', 'lol_meta', 'writer', 'date', 'content']
 
     def get_lol_meta(self,obj):
         return obj.lol_meta.title
