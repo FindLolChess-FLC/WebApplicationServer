@@ -108,4 +108,4 @@ class Comment(models.Model):
     writer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) 
     lol_meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE) 
     content = models.TextField(max_length=500)  
-    created_at = models.DateTimeField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
