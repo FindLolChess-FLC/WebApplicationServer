@@ -1,3 +1,4 @@
+import re
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,9 +8,12 @@ from django.core.cache import cache
 from django.core.mail import EmailMessage
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, DeleteIdSerializer, EmailVerificationSerializer, FavoriteSerializer
+
+from Meta.schema import lol_meta_schema
+from Meta.serializers import LolMetaSerializer
+from .serializers import SignInSerializer, SignUpSerializer, UpdateNicknameSerializer, UpdatePasswordSerializer, EmailVerificationSerializer
 from .models import User
-from Meta.models import LolMeta
+from Meta.models import LolMeta, LolMetaChampion, Synergy
 from .permission import IsAuthenticatedAndTokenVerified
 from decouple import config
 import random
@@ -656,7 +660,7 @@ class CheckFavoriteView(APIView):
     responses={
         200: openapi.Response(
             description='즐겨찾기 조회에 성공했습니다.',
-            schema=FavoriteSerializer,
+            schema=lol_meta_schema,
         ),
         404: openapi.Response(
             description='올바르지 않은 유저입니다.',
@@ -674,14 +678,52 @@ class CheckFavoriteView(APIView):
     
     def get(self, request):
         user = request.user
+        data = []
 
         if user:
-            serializer = FavoriteSerializer(user)
-            return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
+            favorite_data = user.favorite.all()
+            for meta in favorite_data:
+                meta_data = {
+                    'meta': LolMetaSerializer(meta).data,
+                    'synergys': []
+                }
+                meta_synergy = {}
+
+                meta_champions = LolMetaChampion.objects.filter(meta=meta)
+
+                for meta_champion in meta_champions:
+                    if meta.id == meta_champion.meta.id:
+                        synergys = meta_champion.champion.synergy.all()
+                        items = meta_champion.item.all()
+
+                        for synergy in synergys:
+                            if synergy.name not in meta_synergy:
+                                meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src, 'sequence': synergy.sequence}
+                            meta_synergy[synergy.name]['number'] += 1
+
+                        if len(items) > 0 :
+                            for item in items:
+                                if '상징' in item.name :
+                                    synergy = ''.join(re.findall(r'[^ 상징]',item.name))
+
+                                    if synergy not in meta_synergy:
+                                        meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
+                                    meta_synergy[synergy]['number'] += 1
+
+
+                meta_data['synergys'].append(
+                                            dict(sorted(meta_synergy.items(), key=lambda x: (
+                                                'unique' in x[1]['sequence'],  
+                                                x[1]['number']
+                                            ), reverse=True))
+                                        )
+                data.append(meta_data)
+                serializer = LolMetaSerializer(favorite_data)
+
+            return Response({'resultcode': 'SUCCESS', 'data': data}, status=status.HTTP_200_OK)
         
         return Response({'resultcode': 'FAIL',
-                        'message': '올바르지 않은 유저입니다.',
-                        'error': serializer.errors}, status=status.HTTP_404_NOT_FOUND)
+                        'message': '올바르지 않은 유저입니다.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # 즐겨 찾기 
