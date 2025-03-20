@@ -6,7 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
 from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
 from django.utils import timezone
-from django.db.models import F
+from django.db.models import F, Q
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -466,19 +466,26 @@ class CheckReactionView(APIView):
                 description="JWT 토큰이 필요합니다. 'Bearer <토큰>' 형식으로 입력하세요.",
                 type=openapi.TYPE_STRING,
                 required=True
-            )
+            ),
+            openapi.Parameter(
+                'meta_id',
+                openapi.IN_QUERY,
+                description='조회할 메타 ID',
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
         ],
         responses={
             200: openapi.Response(
-                description='성공적으로 유저 리액션 정보를 조회했습니다.',
+                description='성공적으로 메타 리액션 정보를 조회했습니다.',
                 schema=ReactionSerializer,
             ),
-            404: openapi.Response(
-                description='해당 유저 정보를 찾을 수 없습니다.',
+            400: openapi.Response(
+                description='잘못된 토큰 또는 아이디 입니다.',
                 examples={
                     'application/json': {
                         'resultcode': 'FAIL',
-                        'message': '해당하는 유저가 없습니다.'
+                        'message': '잘못된 토큰 또는 아이디 입니다.'
                     }
                 }
             )
@@ -487,12 +494,14 @@ class CheckReactionView(APIView):
 
     def get(self, request):
         user = request.user
-        data = MetaReaction.objects.filter(user=user)
-        if user:
+        meta_id = request.query_params.get('meta_id')
+        
+        if meta_id:
+            data = MetaReaction.objects.filter(Q(user=user) & Q(lol_meta_id=meta_id))
             serializer = ReactionSerializer(data, many=True)
             return Response({'resultcode': 'SUCCESS', 'data': serializer.data}, status=status.HTTP_200_OK)
         
-        return Response({'resultcode': 'FAIL', 'message': '잘못된 토큰 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'resultcode': 'FAIL', 'message': '잘못된 토큰 또는 아이디 입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 리액션 하기
