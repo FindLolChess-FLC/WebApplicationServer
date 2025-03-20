@@ -128,7 +128,7 @@ class ReactionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MetaReaction
-        fields = ['lol_meta']
+        fields = ['lol_meta', 'is_like']
 
 
 # 댓글
