@@ -13,7 +13,12 @@ def champion_crawling():
 
     img_data = get_img_src('챔피언')
 
-    driver = webdriver.Chrome()
+    service = Service('/usr/local/bin/geckodriver')
+    options = Options()
+    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+    options.add_argument("--headless")
+    options.binary_location = '/usr/bin/firefox'
+    driver = webdriver.Firefox(service=service, options=options)
     driver.get(url)
     driver.implicitly_wait(10)
 

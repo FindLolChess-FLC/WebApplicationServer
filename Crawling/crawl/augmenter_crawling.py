@@ -13,7 +13,12 @@ def augmenter_crawling():
         url = f'https://lolchess.gg/augments/set14?type={tier}'
         img_data = get_img_src(f'증강/{src}')
 
-        driver = webdriver.Chrome()
+        service = Service('/usr/local/bin/geckodriver')
+        options = Options()
+        options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
+        options.add_argument("--headless")
+        options.binary_location = '/usr/bin/firefox'
+        driver = webdriver.Firefox(service=service, options=options)
         driver.get(url)
         driver.implicitly_wait(10)
 
