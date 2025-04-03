@@ -34,6 +34,7 @@ def item_crawling():
 
     for item in crawl_data:
         item_data = item.find_element(By.CSS_SELECTOR, 'div > div.relative.overflow-hidden')
+        driver.execute_script("arguments[0].scrollIntoView(true);", item_data)
         act.move_to_element(item_data).perform()
         
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
