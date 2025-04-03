@@ -8,9 +8,6 @@ class Command(BaseCommand):
         LolMetaChampion.objects.all().delete()
         Comment.objects.all().delete()
 
-        # 부모 데이터 삭제
-        LolMeta.objects.all().delete()
-
         ChampionImg.objects.all().delete()
         Champion.objects.all().delete()
 

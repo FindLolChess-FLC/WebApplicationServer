@@ -19,7 +19,7 @@ def opgg_crawling():
     driver.implicitly_wait(1)
     
     # 메타 데이터 크롤링
-    crawl_meta = driver.find_elements(By.CLASS_NAME, 'css-1ywivro')
+    crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'ul.flex.flex-col.gap-1 > li')
     meta_title = []
     meta_champ = []
     meta_champ_location = []
@@ -30,43 +30,52 @@ def opgg_crawling():
     # 챔프, 제목 정보 추출
     for meta in crawl_meta:
         driver.execute_script("arguments[0].scrollIntoView(true);", meta)
-        meta_title.append(meta.find_element(By.CSS_SELECTOR, 'a > div.css-k267f7 > div.top-info > div.basic-info > div.title > strong').text)
-        meta_champ.append([champ.text for champ in meta.find_elements(By.CSS_SELECTOR, 'a > div.css-1my6l2q > div.unit-list > div > div.square--size-semi-large.css-1be4v9m')])
-        
+        meta_title.append(meta.find_element(By.CSS_SELECTOR, 'div > div > div:nth-child(3) > div.items-center > strong').text)
+        meta_champ.append([champ.get_attribute('alt') for champ in meta.find_elements(By.CSS_SELECTOR, 'div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(2) > div > img')])
+
         act = ActionChains(driver)
-        act.move_to_element(meta.find_element(By.CLASS_NAME, 'btn-detail')).click().perform()
+        act.move_to_element(meta.find_element(By.CSS_SELECTOR, 'div.flex.w-full.flex-row.items-center.justify-between.gap-2.md\:basis-\[400px\].md\:flex-col.md\:items-start.md\:px-0.md\:py-\[15px\].md\:pr-\[16px\] > button')).click().perform()
     
-    detail_meta = driver.find_elements(By.CLASS_NAME, 'builder-container')
+    detail_meta = driver.find_elements(By.CSS_SELECTOR, 'div.md\:mt-5.md\:flex.md\:h-\[284px\] > div')
 
     for detail in detail_meta:
-        detail_champion = detail.find_elements(By.CLASS_NAME, 'hexagon')
+        detail_champion = detail.find_elements(By.CSS_SELECTOR, 'div > div')
         location = {}
         item = {}
         star = {}
-
         for index, champion in enumerate(detail_champion, 1):
             
+            champ_location = champion.find_elements(By.CSS_SELECTOR, 'div > div:nth-child(2)')
+
             # 챔피언이 있으면 위치 추출
-            if len(champion.find_elements(By.CSS_SELECTOR, 'div')) > 2:
-                name = champion.find_element(By.CLASS_NAME, 'css-1vg5gno').text
+            if champ_location:
+                name = champ_location[0].text
                 location[name] = index
 
                 # 아이템 추출
-                if champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'): 
+                item_data = champion.find_elements(By.CSS_SELECTOR, 'div > div.absolute > div > div > img')
+
+                if item_data: 
                     detail_item = []
-                    for champ_item in champion.find_elements(By.CSS_SELECTOR, ' div.css-15npqbh > div > img'):
+
+                    for champ_item in item_data:
                         detail_item.append(champ_item.get_attribute('alt'))
                     item[name] = detail_item
 
                 # 별 추출
-                if champion.find_elements(By.CSS_SELECTOR, '.hexagon-star > span'):
-                    star[name] = len(champion.find_elements(By.CSS_SELECTOR, 'div.hexagon-star > span'))
+                champ_star = champion.find_elements(By.CSS_SELECTOR, 'div.absolute.-top-1.flex.w-full.items-center.justify-center > svg')
+                
+                if champ_star:
+                    star[name] = len(champ_star)
                 else:
                     star[name] = 2
 
         meta_champ_location.append(location)
         meta_champ_item.append(item)
         meta_champ_star.append(star)
+
+    print(meta_champ_location)
+    print(meta_champ_star)
 
     # 최종 메타 데이터 구성
     for num in range(len(meta_title)):

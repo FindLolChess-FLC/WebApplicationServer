@@ -30,7 +30,7 @@ def tactics_crawling():
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-        time.sleep(2)
+        time.sleep(5)
 
         new_height = driver.execute_script("return document.body.scrollHeight")
 

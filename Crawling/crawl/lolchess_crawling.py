@@ -43,7 +43,7 @@ def lolchess_crawling():
         driver.implicitly_wait(10)
 
         detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-y6vj5x.e1mgaavq0 > div')
-        crawl_item_data = driver.find_elements(By.CLASS_NAME, 'css-13yc51h.erj04nc0' )
+        crawl_item_data = driver.find_elements(By.CSS_SELECTOR, 'div.css-13yc51h.erj04nc0' )
         detail_meta_champ = []
         detail_champ_star = {}
         detail_champ_item = {}
@@ -54,10 +54,11 @@ def lolchess_crawling():
             for item in crawl_item_data:
                 driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item_img = item.find_element(By.CSS_SELECTOR, 'div.selectedItem > img').get_attribute('src')
-                result_item = ''.join(re.findall(r'(?<=Item_)(.*?)(?=\.png)', item_img) or re.findall(r'items/([^/]+?)(?=_)', item_img))
+                result_item = ''.join(re.findall(r'TFT_Item_([^\.]+)\.png', item_img))
                 item_name = item.find_element(By.CSS_SELECTOR, 'div.selectedItem').text
                 item_translation[result_item] = item_name
 
+        
         for champ in detail:
             champ_text = champ.text.replace(' ', '')
             detail_meta_champ.append(champ_text)
@@ -69,10 +70,7 @@ def lolchess_crawling():
                 if img_elements:  # img 태그가 있을 경우에만 처리
                     detail_champ_item[champ_text] = [
                         item_translation.get(
-                            (re.findall(r'(?<=Item_)(.*?)(?=\.png)', i.get_attribute('src')) or 
-                            re.findall(r'items/([^/]+?)(?=_)', i.get_attribute('src')) or 
-                            [''])[0]
-                        )
+                            (re.findall(r'TFT_Item_([^\.]+)\.png', i.get_attribute('src')) or [''])[0])
                         for i in img_elements
                     ]
 
