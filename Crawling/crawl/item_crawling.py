@@ -47,12 +47,6 @@ def item_crawling():
             item2_data = item_translation(detail_item_data[1])
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-
-            dup_item = Item.objects.filter(name = name_data)
-            if dup_item.exists() and not dup_item.first().item1:
-                dup_item[0].item1 = item1_data
-                dup_item[0].item2 = item2_data
-                dup_item[0].save()
             ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
