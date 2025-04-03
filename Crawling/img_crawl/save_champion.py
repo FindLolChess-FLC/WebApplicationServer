@@ -5,7 +5,7 @@ import os
 
 def save_champion_img(name, img):
     save_directory = 'tft\챔피언'
-    file_path = os.path.join(save_directory, f"{name.text.replace(' ', '')}.png") if name != '노라' else os.path.join(save_directory, f"노라.png")
+    file_path = os.path.join(save_directory, f"{name.text.replace(' ', '')}.png")
     response = requests.get(img)
     with open(file_path, "wb") as file:
         file.write(response.content)
@@ -17,15 +17,11 @@ def save_champion():
     driver.get(url)
     driver.implicitly_wait(10)
 
-    champ_data = driver.find_elements(By.CSS_SELECTOR,'td.css-1gwaozl')
+    champ_data = driver.find_elements(By.CSS_SELECTOR,'tr.cursor-pointer > td:nth-child(2)')
 
     for champ in champ_data:
-        name = champ.find_element(By.CSS_SELECTOR, 'a > div.champions-info > strong')
-        img = champ.find_element(By.CSS_SELECTOR, 'a > div.tooltip.css-1tdngz6 > div > div > img').get_attribute('src')
-
-        if name.text.replace(' ', '') == '노라와유미':
-            save_champion_img('노라', img)
-            continue
+        name = champ.find_element(By.TAG_NAME, 'strong')
+        img = champ.find_element(By.CSS_SELECTOR, 'div >div >div >div> img').get_attribute('src')
 
         save_champion_img(name, img)
 

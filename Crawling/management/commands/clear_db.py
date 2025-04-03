@@ -17,4 +17,5 @@ class Command(BaseCommand):
         LolMetaChampion.objects.all().delete()
         Comment.objects.all().delete()
 
+        print('DB 초기화 완료')
 

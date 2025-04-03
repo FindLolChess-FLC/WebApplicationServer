@@ -10,21 +10,15 @@ def augmenter_crawling():
     img_src = ['실버', '골드', '프리즘']
 
     for tier,src in zip(tier_data,img_src):
-        url = f'https://lolchess.gg/augments/set13?type={tier}'
+        url = f'https://lolchess.gg/augments/set14?type={tier}'
         img_data = get_img_src(f'증강/{src}')
 
-        service = Service('/usr/local/bin/geckodriver')
-        options = Options()
-        options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
-        options.add_argument("--headless")
-        options.binary_location = '/usr/bin/firefox'
-        driver = webdriver.Firefox(service=service, options=options)
-
+        driver = webdriver.Chrome()
         driver.get(url)
         driver.implicitly_wait(10)
 
-        augment_names = driver.find_elements(By.CSS_SELECTOR, 'div.css-mbssy4.e110kr668 > div > span')
-        augment_effects = driver.find_elements(By.CLASS_NAME, 'css-uh2eun.e110kr6612')
+        augment_names = driver.find_elements(By.CSS_SELECTOR, 'div.css-mbssy4.e110kr6610 > div > span')
+        augment_effects = driver.find_elements(By.CLASS_NAME, 'css-uh2eun.e110kr6614')
         
         for name, effect in zip(augment_names, augment_effects):
             if tier == 'silver' :

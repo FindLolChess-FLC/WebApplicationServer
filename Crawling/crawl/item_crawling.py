@@ -3,38 +3,17 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+
 import re
 import itertools
+
 from Meta.models import Item, ItemImg
 from Crawling.utils import get_img_src
-
-# 조합 아이템 번역
-def item_translation(data):
-    data = data.lower()
-    if data == 'bfsword':
-        return 'B.F.대검'
-    elif data == 'recurvebow':
-        return '곡궁'
-    elif data == 'chainvest':
-        return '쇠사슬 조끼'
-    elif data == 'negatroncloak':
-        return '음전자 망토'
-    elif data == 'needlesslylargerod':
-        return '쓸데없이 큰 지팡이'
-    elif data == 'tearofthegoddess':
-        return '여신의 눈물'
-    elif data == 'giantsbelt':
-        return '거인의 허리띠'
-    elif data == 'sparringgloves':
-        return '연습용 장갑'
-    elif data == 'spatula':
-        return '뒤집개'
-    elif data == 'fryingpan':
-        return '프라이팬'
+from Crawling.utils import item_translation
 
 # 아이템 데이터 크롤링
 def item_crawling():
-    url = 'https://lolchess.gg/meta/items?type=all'
+    url = 'https://lolchess.gg/items/set14'
     driver = webdriver.Chrome()
 
     driver.get(url)
@@ -50,29 +29,27 @@ def item_crawling():
     for index, item in enumerate(item_data):
         act.move_to_element(item).perform()
         
-        act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-64ogn7.eosr60k0')))
+        act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
         name_data = act_data.find_element(By.TAG_NAME,'strong').text
         effect_data = ''.join(list(itertools.chain([i.text for i in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' ')
-        detail_item_data = crawl_data[index].find_elements(By.CSS_SELECTOR, '.compositions > div > img')
+        detail_item_data = crawl_data[index].find_elements(By.CSS_SELECTOR, 'ul > li > div > div > img')
         
         if detail_item_data:
-            detail_item = [''.join(re.findall(r"TFT_Item_(.*?)\.png", item.get_attribute('src'))) for item in detail_item_data]
+            detail_item = [''.join(re.findall(r"TFT_Item_([^\.]+)\.png", item.get_attribute('src'))) for item in detail_item_data]
             item1_data = item_translation(detail_item[0].lower())
             item2_data = item_translation(detail_item[1].lower())
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
-            print(img_data)
-            print(item_instance)
             ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
         else:
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
             ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
 
-    comb_url = 'https://lolchess.gg/items/set13/table'
+    comb_url = 'https://lolchess.gg/items/set14/table'
     driver.get(comb_url)
     driver.implicitly_wait(10)
 
-    comb_item_data = driver.find_elements(By.CSS_SELECTOR, ' tbody > tr:nth-child(1) > td')
+    comb_item_data = driver.find_elements(By.CSS_SELECTOR, ' tbody > tr:nth-child(1) > td ')
     comb_act = ActionChains(driver)
 
     for comb_item in comb_item_data[1:]:

@@ -24,7 +24,7 @@ def item_translation(data):
         return '음전자 망토'
     elif data == 'NeedlesslyLargeRod':
         return '쓸데없이 큰 지팡이'
-    elif data == 'Tearofthegoddess':
+    elif data == 'TearOfTheGoddess':
         return '여신의 눈물'
     elif data == 'GiantsBelt':
         return '거인의 허리띠'
