@@ -20,24 +20,23 @@ def item_crawling():
     driver.implicitly_wait(1)
     
     crawl_data = driver.find_elements(By.CSS_SELECTOR, 'td.name.css-17s55cr.efxas325')
-    item_data = driver.find_elements(By.CSS_SELECTOR, 'td.name.css-17s55cr.efxas325 > div > div.relative.overflow-hidden')
-
+    
     act = ActionChains(driver)
 
     img_data = get_img_src('아이템')
 
-    for index, item in enumerate(item_data):
-        act.move_to_element(item).perform()
+    for index, item in enumerate(crawl_data):
+        item_data = item.find_element(By.CSS_SELECTOR, 'div > div.relative.overflow-hidden')
+        act.move_to_element(item_data).perform()
         
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
         name_data = act_data.find_element(By.TAG_NAME,'strong').text
-        effect_data = ''.join(list(itertools.chain([i.text for i in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' ')
-        detail_item_data = crawl_data[index].find_elements(By.CSS_SELECTOR, 'ul > li > div > div > img')
+        effect_data = ''.join(list(itertools.chain([effect.text for effect in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' ')
+        detail_item_data = list(itertools.chain.from_iterable(re.findall(r"TFT_Item_([^\.]+)\.png", detail.get_attribute('src'))  for detail in item.find_elements(By.CSS_SELECTOR, 'div.content > div > div > img')))
         
         if detail_item_data:
-            detail_item = [''.join(re.findall(r"TFT_Item_([^\.]+)\.png", item.get_attribute('src'))) for item in detail_item_data]
-            item1_data = item_translation(detail_item[0].lower())
-            item2_data = item_translation(detail_item[1].lower())
+            item1_data = item_translation(detail_item_data[0])
+            item2_data = item_translation(detail_item_data[1])
 
             item_instance, created = Item.objects.get_or_create(name=name_data, item1=item1_data, item2=item2_data, effect=effect_data)
             ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
@@ -50,6 +49,7 @@ def item_crawling():
     driver.implicitly_wait(10)
 
     comb_item_data = driver.find_elements(By.CSS_SELECTOR, ' tbody > tr:nth-child(1) > td ')
+    driver.execute_script("arguments[0].scrollIntoView(true);", comb_item_data[0])
     comb_act = ActionChains(driver)
 
     for comb_item in comb_item_data[1:]:
