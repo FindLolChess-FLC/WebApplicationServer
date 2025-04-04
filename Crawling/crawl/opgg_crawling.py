@@ -2,7 +2,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
-from selenium.webdriver import ActionChains
 
 import time
 
@@ -35,8 +34,10 @@ def opgg_crawling():
         meta_title.append(meta.find_element(By.CSS_SELECTOR, 'div.flex.items-center.gap-1.text-\[12px\].leading-\[16px\].text-gray-0.md\:w-full.md\:gap-\[8px\].md\:text-\[14px\].md\:leading-\[20px\] > strong').text)
         meta_champ.append([champ.get_attribute('alt') for champ in meta.find_elements(By.CSS_SELECTOR, 'div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(2) > div > img')])
 
-        act = ActionChains(driver)
-        act.move_to_element(meta.find_element(By.CSS_SELECTOR, 'div.flex.w-full.flex-row.items-center.justify-between.gap-2.md\:basis-\[400px\].md\:flex-col.md\:items-start.md\:px-0.md\:py-\[15px\].md\:pr-\[16px\] > button')).click().perform()
+        button = meta.find_element(By.CSS_SELECTOR, 'div.flex.w-full.flex-row.items-center.justify-between.gap-2.md\\:basis-\\[400px\\].md\\:flex-col.md\\:items-start.md\\:px-0.md\\:py-\\[15px\\].md\\:pr-\\[16px\\] > button')
+        driver.execute_script("arguments[0].scrollIntoView(true);", button)
+        time.sleep(0.3)
+        button.click()
     
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
