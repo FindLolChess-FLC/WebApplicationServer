@@ -14,10 +14,9 @@ def opgg_crawling():
     options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
     options.add_argument("--headless")
     options.binary_location = '/usr/bin/firefox'
-    profile = webdriver.FirefoxProfile()
-    profile.set_preference("general.useragent.override", 
+    options.set_preference("general.useragent.override",
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-    driver = webdriver.Firefox(service=service, options=options, firefox_profile=profile)
+    driver = webdriver.Firefox(service=service, options=options)
 
     driver.get(url)
     driver.implicitly_wait(1)
