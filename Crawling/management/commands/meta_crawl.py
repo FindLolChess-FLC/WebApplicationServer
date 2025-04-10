@@ -10,11 +10,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         lolchess = lolchess_crawling()
         opgg = opgg_crawling()
-        # tactics = tactics_crawling()
+        tactics = tactics_crawling()
 
         first_merged_data = remove_duplicates_data(lolchess,opgg)
-        # final_merged_data = remove_duplicates_data(first_merged_data,tactics)
-        final_merged_data = first_merged_data
+        final_merged_data = remove_duplicates_data(first_merged_data,tactics)
         merge_duplicate_keys = set()
 
         db_meta_data = LolMeta.objects.all()
