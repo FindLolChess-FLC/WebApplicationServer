@@ -25,10 +25,10 @@ def find_db(data):
             results = LolMeta.objects.filter(
                                             Q(lolmetachampion__champion__synergy__name=first_keyword) |  
                                             Q(lolmetachampion__champion__synergy__name=cleand_keyword))
-        if LolMeta.objects.filter(Q(title=first_keyword.strip()) | Q(title=cleand_keyword)).exists():
+        if LolMeta.objects.filter(Q(title__icontains=first_keyword.strip()) | Q(title__icontains=cleand_keyword)).exists():
             results = LolMeta.objects.filter(
-                                            Q(title=first_keyword.strip()) | 
-                                            Q(title=cleand_keyword))
+                                            Q(title__icontains=first_keyword.strip()) | 
+                                            Q(title__icontains=cleand_keyword))
 
         # 두 번째 및 세 번째 키워드 필터링
         for keyword in data[1:]:
