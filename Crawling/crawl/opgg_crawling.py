@@ -11,15 +11,6 @@ def opgg_crawling():
 
     driver.get(url)
     driver.implicitly_wait(1)
-    
-    language = driver.find_element(By.CSS_SELECTOR, 'div.DetectLocale-module_btn-wrapper__5auv9 > button:nth-child(1)')
-    language_selector = driver.find_element(By.CSS_SELECTOR, 'button.DetectLocgiale-module_btn__kH7V7.DetectLocale-module_submit-btn__d4BJQ.Button-module_primary__C6Yja')
-
-    act = ActionChains(driver)
-
-    if language.text == '한국어':
-        act.move_to_element(language_selector).click().perform()
-        time.sleep(3)
 
     # 메타 데이터 크롤링
     crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'ul.flex.flex-col.gap-1 > li')
