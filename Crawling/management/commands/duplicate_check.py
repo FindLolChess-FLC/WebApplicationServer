@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand
-from Crawling.data_update.update_item import update_item
+from Crawling.data_update.check_duplicate import find_duplicate_lolmeta
 
 
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        update_item()
+        find_duplicate_lolmeta()

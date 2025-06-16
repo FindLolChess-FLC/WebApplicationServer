@@ -1,6 +1,7 @@
 from Meta.models import *
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
     def handle(self, *args, **options):
         # 외래 키 참조 데이터 먼저 삭제
