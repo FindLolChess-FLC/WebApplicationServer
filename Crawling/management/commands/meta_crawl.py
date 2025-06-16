@@ -5,6 +5,7 @@ from Crawling.crawl.tactics_crawling import tactics_crawling
 from Crawling.utils import reroll_lv, jacaard_similarity, remove_duplicates_data
 from Meta.models import * 
 
+
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
