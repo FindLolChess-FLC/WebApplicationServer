@@ -10,9 +10,9 @@ def augmenter_crawling():
     img_src = ['실버', '골드', '프리즘']
 
     for tier,src in zip(tier_data,img_src):
-        url = f'https://lolchess.gg/augments/set14?type={tier}'
+        url = f'https://lolchess.gg/augments/set15?type={tier}'
         img_data = get_img_src(f'증강/{src}')
-
+        
         driver = webdriver.Chrome()
         driver.get(url)
         driver.implicitly_wait(10)

@@ -11,7 +11,7 @@ def save_champion_img(name, img):
         file.write(response.content)
 
 def save_champion():
-    url = 'https://tft.op.gg/meta-trends/champion'
+    url = 'https://op.gg/ko/tft/meta-trends/champion'
     driver = webdriver.Chrome()
 
     driver.get(url)

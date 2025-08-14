@@ -57,6 +57,7 @@ def get_img_src(folder_name):
     )
     
     image_urls = {}
+
     for resource in response["resources"]:
         image_urls[resource['display_name']] = resource["secure_url"]
 
