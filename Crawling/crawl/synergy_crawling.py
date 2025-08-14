@@ -22,7 +22,7 @@ def synergy_crawling():
     img_data = get_img_src('시너지')
 
     for type in synergy_type:
-        url = f'https://lolchess.gg/synergies/set14?type={type}'
+        url = f'https://lolchess.gg/synergies/set15?type={type}'
 
         driver.get(url)
         driver.implicitly_wait(10)
@@ -39,7 +39,7 @@ def synergy_crawling():
                 synergy_type_data[name] = []
                 synergy_type_data[name].append(type if type != 'chromatic' else 'prism')
 
-    url = 'https://lolchess.gg/synergies/set14/guide'
+    url = 'https://lolchess.gg/synergies/set15/guide'
     driver.get(url)
     driver.implicitly_wait(10)
 

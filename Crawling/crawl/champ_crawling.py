@@ -9,7 +9,7 @@ from Crawling.utils import get_img_src
 
 # 챔피언 정보 저장
 def champion_crawling():
-    url = 'https://tft.op.gg/meta-trends/champion'
+    url = 'https://op.gg/ko/tft/meta-trends/champion'
 
     img_data = get_img_src('챔피언')
 
@@ -23,7 +23,7 @@ def champion_crawling():
     driver.implicitly_wait(10)
 
     champ_name_data = driver.find_elements(By.CSS_SELECTOR,'tr.cursor-pointer > td:nth-child(2) > div > div:nth-child(2) > strong')
-    champ_synergy_data = driver.find_elements(By.CSS_SELECTOR, 'tr.cursor-pointer > td:nth-child(2) > div > div:nth-child(2) > ul')
+    champ_synergy_data = driver.find_elements(By.CSS_SELECTOR, 'tr.cursor-pointer > td:nth-child(2) > div > div:nth-child(2) > div')
     champ_price_data = driver.find_elements(By.CSS_SELECTOR,'tbody > tr > td:nth-child(3)')
 
     for name, synergy, price in zip(champ_name_data, champ_synergy_data, champ_price_data):

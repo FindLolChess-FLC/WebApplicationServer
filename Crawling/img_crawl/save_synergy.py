@@ -11,7 +11,7 @@ def save_synergy_img(name, img):
         file.write(response.content)
 
 def save_synergy():
-    url = 'https://lolchess.gg/synergies/set14'
+    url = 'https://lolchess.gg/synergies/set15'
     driver = webdriver.Chrome()
 
     driver.get(url)

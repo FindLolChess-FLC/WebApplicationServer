@@ -19,7 +19,7 @@ def save_augment_img(tier, name, img):
 def save_augment():
     tier_data = ['silver', 'gold', 'prismatic']
     for tier in tier_data:
-        url = f'https://lolchess.gg/augments/set14?type={tier}'
+        url = f'https://lolchess.gg/augments/set15?type={tier}'
         driver = webdriver.Chrome()
 
         driver.get(url)

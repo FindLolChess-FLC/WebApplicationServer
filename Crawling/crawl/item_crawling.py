@@ -52,7 +52,7 @@ def item_crawling():
             item_instance, created = Item.objects.get_or_create(name = name_data, effect = effect_data)
             ItemImg.objects.get_or_create(item=item_instance, img_src=img_data.get(item_instance.name.replace(' ', ''), 'empty'))
 
-    comb_url = 'https://lolchess.gg/items/set14/table'
+    comb_url = 'https://lolchess.gg/items/set15/table'
     driver.get(comb_url)
     driver.implicitly_wait(10)
 

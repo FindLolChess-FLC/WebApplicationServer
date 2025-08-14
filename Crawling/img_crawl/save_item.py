@@ -15,7 +15,7 @@ def save_item_img(name, img):
         file.write(response.content)
 
 def save_item():
-    url = 'https://lolchess.gg/items/set14'
+    url = 'https://lolchess.gg/items/set15'
     driver = webdriver.Chrome()
 
     driver.get(url)
@@ -28,7 +28,7 @@ def save_item():
         img = item.find_element(By.CSS_SELECTOR, 'div > div.relative.overflow-hidden > img').get_attribute('src')
         save_item_img(name, img)
     
-    comb_url = 'https://lolchess.gg/items/set14/table'
+    comb_url = 'https://lolchess.gg/items/set15/table'
     driver.get(comb_url)
     driver.implicitly_wait(10)
     
