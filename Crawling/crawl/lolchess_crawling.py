@@ -54,10 +54,9 @@ def lolchess_crawling():
             for item in crawl_item_data:
                 driver.execute_script("arguments[0].scrollIntoView(true);", item)
                 item_img = item.find_element(By.CSS_SELECTOR, 'div.selectedItem > img').get_attribute('src')
-                result_item = ''.join(re.findall(r'TFT_Item_([^\.]+)\.png', item_img))
+                result_item = ''.join(re.findall(r'/images/items/([^_]+)_', item_img))
                 item_name = item.find_element(By.CSS_SELECTOR, 'div.selectedItem').text
                 item_translation[result_item] = item_name
-
         
         for champ in detail:
             champ_text = champ.text.replace(' ', '')
@@ -70,9 +69,10 @@ def lolchess_crawling():
                 if img_elements:  # img 태그가 있을 경우에만 처리
                     detail_champ_item[champ_text] = [
                         item_translation.get(
-                            (re.findall(r'TFT_Item_([^\.]+)\.png', i.get_attribute('src')) or [''])[0])
+                            (re.findall(r'/images/items/([^_]+)_', i.get_attribute('src')) or [''])[0])
                         for i in img_elements
                     ]
+
 
                 # 별 개수 추출
                 star_elements = champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div')
