@@ -8,7 +8,7 @@ from Crawling.crawl.augmenter_crawling import augmenter_crawling
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        # synergy_crawling()
-        # champion_crawling()
+        synergy_crawling()
+        champion_crawling()
         item_crawling()
-        # augmenter_crawling()
+        augmenter_crawling()
