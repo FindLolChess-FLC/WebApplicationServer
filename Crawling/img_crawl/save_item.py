@@ -35,7 +35,7 @@ def save_item():
     comb_item_data = driver.find_elements(By.CSS_SELECTOR, 'tr:nth-child(1) > td > div > div > div > div > img')
 
     for comb_item in comb_item_data:
-        name = item_translation(re.findall(r'TFT_Item_([^\.]+)\.png', comb_item.get_attribute('src'))[0])
+        name = item_translation(re.findall(r'/images/items/([^_]+)_', comb_item.get_attribute('src'))[0])
         img = comb_item.get_attribute('src')
         save_item_img(name, img)
 
