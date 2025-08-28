@@ -36,12 +36,17 @@ class Command(BaseCommand):
         meta_data = final_merged_data
 
         for data in meta_data:
+            
+            if len(meta_data[data]['챔프']) < 5:
+                continue
+
             meta, created = LolMeta.objects.get_or_create(title = data)
             
             if not created:
                 continue
 
             champ_star = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0} 
+
             for champ_name in meta_data[data]['챔프']:
                 champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
                                                             champion = Champion.objects.get(name = champ_name.replace(' ', '')),
