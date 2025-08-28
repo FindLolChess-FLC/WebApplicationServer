@@ -43,7 +43,8 @@ def opgg_crawling():
     
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
-    detail_meta = driver.find_elements(By.CSS_SELECTOR, 'div.md\:mt-5.md\:flex.md\:h-\[284px\] > div')
+    detail_meta = driver.find_elements(By.CSS_SELECTOR, 'div > div.flex.h-\[192px\].w-full.flex-col.items-center.justify-center.md\:mt-1.md\:h-auto.md\:justify-start')
+    print('디테일', detail_meta)
 
     for detail in detail_meta:
         detail_champion = detail.find_elements(By.CSS_SELECTOR, 'div.\-mt-2.flex.gap-1.first\:mt-0.md\:gap-2.\[\&\:nth-child\(even\)\]\:ml-\[22px\].md\:\[\&\:nth-child\(even\)\]\:ml-10 > div')
@@ -51,8 +52,7 @@ def opgg_crawling():
         item = {}
         star = {}
         for index, champion in enumerate(detail_champion, 1):
-            
-            champ_location = champion.find_elements(By.CSS_SELECTOR, 'div.\[clip-path\:polygon\(0px_27\%\,_50\%_0px\,_100\%_27\%\,_100\%_73\%\,_50\%_100\%\,_0px_73\%\,_0px_27\%\)\] > div > img')
+            champ_location = champion.find_elements(By.CSS_SELECTOR, 'div > div > div > img')
 
             # 챔피언이 있으면 위치 추출
             if champ_location:
@@ -71,7 +71,7 @@ def opgg_crawling():
 
                 # 별 추출
                 champ_star = champion.find_elements(By.CSS_SELECTOR, 'div.absolute.-top-1.flex.w-full.items-center.justify-center > svg')
-                
+
                 if champ_star:
                     star[name] = len(champ_star)
                 else:
