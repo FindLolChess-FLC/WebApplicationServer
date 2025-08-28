@@ -8,7 +8,7 @@ import re
 import itertools
 
 from Meta.models import Item, ItemImg
-from Crawling.utils import get_img_src
+from Crawling.utils import get_img_src  
 from Crawling.utils import item_translation
 
 # 아이템 데이터 크롤링
@@ -33,7 +33,7 @@ def item_crawling():
         act_data = WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.CLASS_NAME, 'css-16emzv1.eosr60k1')))
         name_data = act_data.find_element(By.TAG_NAME,'strong').text
         effect_data = ''.join(list(itertools.chain([effect.text for effect in act_data.find_elements(By.TAG_NAME,'p')]))).replace('\n', ' ')
-        detail_item_data = list(itertools.chain.from_iterable(re.findall(r"TFT_Item_([^\.]+)\.png", detail.get_attribute('src'))  for detail in item.find_elements(By.CSS_SELECTOR, 'div.content > div > div > img')))
+        detail_item_data = list(itertools.chain.from_iterable(re.findall(r"/images/items/([^_]+)_", detail.get_attribute('src'))  for detail in item.find_elements(By.CSS_SELECTOR, 'div.content > div > div > img')))
         
         if detail_item_data:
             item1_data = item_translation(detail_item_data[0])
