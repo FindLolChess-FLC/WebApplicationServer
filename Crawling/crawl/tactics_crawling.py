@@ -1,97 +1,107 @@
+"""Collect current tactics.tools team-composition summaries with Selenium."""
+import os
+import tempfile
+
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-import time
+from selenium.webdriver.support.ui import WebDriverWait
+
+
+URL = 'https://tactics.tools/ko/team-compositions'
+CARD_SELECTOR = '.tc-summary-wrap'
+CARD_SCRIPT = r"""
+return Array.from(document.querySelectorAll('.tc-summary-wrap')).map(card => {
+    const images = Array.from(card.querySelectorAll('img[alt]'))
+        .filter(image => image.parentElement.className.includes('mx-[3px]'));
+    return {
+        title: card.querySelector('.text-lg.pl-1')?.textContent.trim(),
+        champions: images.map(image => ({
+            name: image.alt,
+            star: 0,
+            location: 0,
+            items: Array.from(image.parentElement.querySelectorAll('img[alt]'))
+                .filter(item => item !== image).map(item => item.alt),
+        })),
+        complete: false,
+    };
+});
+"""
+
+
+def validate_tactics_records(records):
+    if not records:
+        raise ValueError('tactics.tools 덱 목록이 비어 있습니다.')
+    titles = set()
+    for record in records:
+        title = record.get('title') or ''
+        slots = record.get('champions') or []
+        if not title or len(title) > 50 or title in titles:
+            raise ValueError(f'tactics.tools 덱 제목이 잘못되었거나 중복됩니다: {title}')
+        if not 5 <= len(slots) <= 28 or any(not slot.get('name') for slot in slots):
+            raise ValueError(f'{title}: 챔피언 목록이 비어 있거나 잘못되었습니다.')
+        if any(slot['location'] != 0 or slot['star'] != 0 for slot in slots):
+            raise ValueError(f'{title}: 출처에 없는 배치·별 정보를 추정하면 안 됩니다.')
+        titles.add(title)
+    return records
+
+
+def collect_tactics_meta(*, timeout=30, driver_factory=None):
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--window-size=1440,900')
+    options.add_argument('--lang=ko-KR')
+    if hasattr(os, 'geteuid') and os.geteuid() == 0:
+        options.add_argument('--no-sandbox')
+    if os.environ.get('CHROME_BIN'):
+        options.binary_location = os.environ['CHROME_BIN']
+    with tempfile.TemporaryDirectory(prefix='flc-tactics-chrome-') as profile:
+        options.add_argument(f'--user-data-dir={profile}')
+        if driver_factory:
+            driver = driver_factory(options=options)
+        else:
+            service_path = os.environ.get('CHROMEDRIVER_PATH')
+            driver = webdriver.Chrome(
+                options=options,
+                service=Service(executable_path=service_path) if service_path else None,
+            )
+        try:
+            driver.set_page_load_timeout(timeout)
+            driver.get(URL)
+            try:
+                WebDriverWait(driver, timeout).until(
+                    lambda d: d.find_elements(By.CSS_SELECTOR, CARD_SELECTOR))
+            except TimeoutException as exc:
+                raise ValueError(f'tactics.tools 덱 목록을 찾지 못했습니다: {driver.title}') from exc
+            # Cards are appended as the bottom of the page enters the viewport.
+            stable_scrolls = 0
+            for _ in range(10):
+                before = len(driver.find_elements(By.CSS_SELECTOR, CARD_SELECTOR))
+                driver.execute_script('window.scrollTo(0, document.body.scrollHeight)')
+                try:
+                    WebDriverWait(driver, 2).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, CARD_SELECTOR)) > before)
+                except TimeoutException:
+                    stable_scrolls += 1
+                    if stable_scrolls >= 2:
+                        break
+                else:
+                    stable_scrolls = 0
+            return validate_tactics_records(driver.execute_script(CARD_SCRIPT))
+        finally:
+            driver.quit()
+
 
 def tactics_crawling():
-    driver = webdriver.Chrome()
-    url = 'https://tactics.tools/ko/team-compositions'
-    driver.get(url)
-
-    detail_meta_link = []
-    meta_title = []
-    meta_champ = []
-    meta_champ_location = []
-    meta_champ_item = []
-    meta_champ_star = []
-    meta_data = {} 
-
-    last_height = driver.execute_script("return document.body.scrollHeight")
-
-    # 모든 데이터를 가져오기위해 스크롤을 더이상 데이터가 로딩안될때까지 내리기
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-        time.sleep(5)
-
-        new_height = driver.execute_script("return document.body.scrollHeight")
-
-        if new_height == last_height:
-            break  
-
-        last_height = new_height
-        
-    crawl_meta = driver.find_elements(By.CLASS_NAME, 'tc-summary-wrap')
-    
-    for meta in crawl_meta:
-        meta_title.append(meta.find_element(By.CLASS_NAME, 'text-lg.pl-1.font-montserrat.font-semibold').text)
-        champ_data = meta.find_elements(By.CSS_SELECTOR, '.flex > div.mx-\\[3px\\].sm\\:mx-\\[5px\\].flex-shrink-0.relative.flex.flex-col')
-        champ_item = {}
-        champ_star = {}
-
-        # 아이템 및 별 데이터 저장
-        for champ in champ_data:
-            name = champ.find_element(By.CSS_SELECTOR, 'img').get_attribute('alt').replace(' ','')
-            item = champ.find_elements(By.CSS_SELECTOR, '.absolute.flex.justify-center.left-\\[-4px\\].css-nmhol0.flex > img')
-            star = champ.find_elements(By.TAG_NAME, 'svg')
-
-            if item:
-                champ_item[name] = [item_name.get_attribute('alt') for item_name in item]
-
-            if star:
-                champ_star[name] = 3
-            else:
-                champ_star[name] = 2
-
-        meta_champ_item.append(champ_item)
-        meta_champ_star.append(champ_star)
-        detail_meta_link.append(meta.find_element(By.CSS_SELECTOR, 'div.flex.items-center.mt-\[-2px\] > div > a').get_attribute('href'))
-
-    for sequence, detail_link in enumerate(detail_meta_link):
-        driver.get(detail_link)
-
-        location_data = driver.find_elements(By.CSS_SELECTOR, '#team-planner-svg > g > g')[::-1]
-        champ_location = {}
-
-        champ_name = []
-        meta_champ_star_keys = list(meta_champ_star[sequence].keys())
-
-        # flex챔피언과 디테일 챔피언이 다를 경우 디테일에 없는 flex 챔피언 제거
-        for key in meta_champ_star_keys:
-            if key not in champ_name:
-                del meta_champ_star[sequence][key]
-
-        # 위치 데이터 저장
-        for index, location in enumerate(location_data,1):
-            name = location.text.replace(' ', '')
-
-            # 챔피언 이름 데이터 저장
-            if name:
-                champ_location[name] = index          
-                champ_name.append(name)
-
-                # 만약 별 데이터에 디테일 챔피언이 없는경우 추가
-                if not meta_champ_star[sequence].get(name, None):
-                    meta_champ_star[sequence][name] = 2
-
-        meta_champ.append(champ_name)
-        meta_champ_location.append(champ_location)
-        
-    for num in range(len(meta_title)):
-        meta_data[meta_title[num]] = {
-            '챔프': meta_champ[num],
-            '별': meta_champ_star[num],
-            '위치': meta_champ_location[num],
-            '아이템': meta_champ_item[num]
+    """Existing meta-data shape; zero means location/star was not provided."""
+    return {
+        record['title']: {
+            '챔프': [slot['name'] for slot in record['champions']],
+            '별': {slot['name']: slot['star'] for slot in record['champions']},
+            '위치': {slot['name']: slot['location'] for slot in record['champions']},
+            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
         }
-    
-    return meta_data
+        for record in collect_tactics_meta()
+    }

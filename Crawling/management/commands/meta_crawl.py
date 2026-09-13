@@ -1,71 +1,129 @@
-from django.core.management.base import BaseCommand
-from Crawling.crawl.opgg_crawling import opgg_crawling
-from Crawling.crawl.lolchess_crawling import lolchess_crawling
-from Crawling.crawl.tactics_crawling import tactics_crawling
-from Crawling.utils import reroll_lv, jacaard_similarity, remove_duplicates_data
-from Meta.models import * 
+"""Collect all three meta sites, deduplicate by champions, and save valid boards."""
+from collections import defaultdict
+
+from django.core.management.base import BaseCommand, CommandError
+
+from Crawling.crawl.lolchess_crawling import collect_lolchess_meta
+from Crawling.crawl.opgg_crawling import collect_opgg_meta
+from Crawling.crawl.tactics_crawling import collect_tactics_meta
+from Crawling.management.commands.lolchess_meta_crawl import _key, save_records
+from Crawling.utils import remove_duplicates_data
+from Meta.models import Champion, Item, LolMeta, LolMetaChampion
+
+
+def comparable_champions(record, champions):
+    """Use known, purchasable champions; summons cannot distort similarity."""
+    return sorted({_key(slot['name']) for slot in record['champions']
+                   if _key(slot['name']) in champions
+                   and champions[_key(slot['name'])].price > 0})
+
+
+def valid_board(record):
+    slots = record['champions']
+    locations = [slot['location'] for slot in slots]
+    return (record.get('complete', True) and 5 <= len(slots) <= 28
+            and len(locations) == len(set(locations))
+            and all(1 <= location <= 28 for location in locations)
+            and all(1 <= slot['star'] <= 3 for slot in slots))
+
+
+def unique_meta_title(title, used):
+    if title not in used:
+        return title
+    for number in range(2, 1000):
+        suffix = f' {number}'
+        candidate = title[:50 - len(suffix)] + suffix
+        if candidate not in used:
+            return candidate
+    raise ValueError(f'중복 덱 제목을 구별할 수 없습니다: {title}')
 
 
 class Command(BaseCommand):
+    help = 'lolchess.gg, OP.GG, tactics.tools 메타 덱을 수집하고 유사 덱을 제외해 DB에 저장합니다.'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--dry-run', action='store_true')
+        parser.add_argument('--similarity', type=float, default=0.8)
 
     def handle(self, *args, **options):
-        lolchess = lolchess_crawling()
-        opgg = opgg_crawling()
-        tactics = tactics_crawling()
+        threshold = options['similarity']
+        if not 0 < threshold <= 1:
+            raise CommandError('유사도 기준은 0보다 크고 1 이하여야 합니다.')
 
-        first_merged_data = remove_duplicates_data(lolchess,opgg)
-        final_merged_data = remove_duplicates_data(first_merged_data,tactics)
-        merge_duplicate_keys = set()
+        # Collect all sites before changing the database. Site order determines
+        # which representative survives when their champion rosters are similar.
+        sources = []
+        for name, collector in (
+            ('lolchess.gg', collect_lolchess_meta),
+            ('OP.GG', collect_opgg_meta),
+            ('tactics.tools', collect_tactics_meta),
+        ):
+            try:
+                records = collector()
+            except Exception as exc:
+                raise CommandError(f'{name} 수집 실패: {exc}') from exc
+            if not records:
+                raise CommandError(f'{name}에서 메타 덱을 찾지 못했습니다.')
+            sources.append((name, records))
+            self.stdout.write(f'{name}: {len(records)}개 수집')
 
-        db_meta_data = LolMeta.objects.all()
-        db_meta_champion = []
+        champions = {_key(champion.name): champion for champion in Champion.objects.all()}
+        prices = {name: champion.price for name, champion in champions.items()}
+        items = {_key(item.name): item for item in Item.objects.all()}
+        existing = defaultdict(set)
+        for placed in LolMetaChampion.objects.select_related('champion').filter(champion__price__gt=0):
+            existing[placed.meta_id].add(_key(placed.champion.name))
+        merged = {f'db:{meta_id}': {'챔프': sorted(roster)}
+                  for meta_id, roster in existing.items() if len(roster) >= 5}
+        known_count = len(merged)
+        too_few = 0
+        for source, records in sources:
+            incoming = {}
+            for index, record in enumerate(sorted(records, key=lambda row: not row.get('complete', True))):
+                roster = comparable_champions(record, champions)
+                if len(roster) < 5:
+                    too_few += 1
+                    continue
+                incoming[f'{source}:{index}'] = {
+                    '챔프': roster, 'record': record,
+                }
+            before = len(merged)
+            merged = remove_duplicates_data(merged, incoming, threshold, prices)
+            self.stdout.write(f'{source}: 유사 덱 {len(incoming) - (len(merged) - before)}개 제외')
 
-        if db_meta_data:
-            for db_meta in db_meta_data:
-                db_meta_champion.append([meta_champ.champion.name for meta_champ in LolMetaChampion.objects.select_related('champion').filter(meta=db_meta).order_by('champion__name')])
-
-        for merge_key, merge_value in final_merged_data.items():
-            for db_meta in db_meta_champion:
-                if jacaard_similarity(sorted(merge_value['챔프']), db_meta) == 1:
-                    merge_duplicate_keys.add(merge_key)
-                    break 
-        
-        for merge_key in merge_duplicate_keys:
-            del final_merged_data[merge_key]
-
-        meta_data = final_merged_data
-
-        for data in meta_data:
-            
-            if len(meta_data[data]['챔프']) < 5:
+        titles = set(LolMeta.objects.values_list('title', flat=True))
+        ready, incomplete, missing, renamed = [], [], [], []
+        for value in list(merged.values())[known_count:]:
+            record = value['record']
+            title = record['title']
+            if not valid_board(record):
+                incomplete.append(title)
                 continue
-
-            meta, created = LolMeta.objects.get_or_create(title = data)
-            
-            if not created:
+            missing_champs = {_key(slot['name']) for slot in record['champions']
+                              if _key(slot['name']) not in champions}
+            missing_items = {_key(name) for slot in record['champions'] for name in slot['items']
+                             if _key(name) not in items}
+            if missing_champs or missing_items:
+                missing.append((record, missing_champs, missing_items))
                 continue
+            saved_title = unique_meta_title(title, titles)
+            if saved_title != title:
+                renamed.append((title, saved_title))
+            ready.append({**record, 'title': saved_title})
+            titles.add(saved_title)
 
-            champ_star = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0} 
-
-            for champ_name in meta_data[data]['챔프']:
-                champion, created = LolMetaChampion.objects.get_or_create(meta = meta, 
-                                                            champion = Champion.objects.get(name = champ_name.replace(' ', '')),
-                                                            star = meta_data[data]['별'][champ_name], 
-                                                            location = meta_data[data]['위치'][champ_name])
-                
-                price = Champion.objects.get(name = champ_name.replace(' ', '')).price
-
-                champ_star[price] += meta_data[data]['별'][champ_name]
-
-                champ_item = meta_data[data]['아이템'].get(champ_name, [])
-                if len(champ_item) > 0 :
-                    for item in champ_item:
-                        if Item.objects.filter(name=item).exists():
-                            champion.item.add(Item.objects.filter(name=item).first())
-
-            max_value = max(champ_star.values())
-            max_keys = [key for key, value in champ_star.items() if value == max_value]
-
-            meta.reroll_lv = reroll_lv(max(max_keys))
-            meta.save()
-    
+        self.stdout.write(f'비교 가능한 챔피언 부족 {too_few}개, 배치 미확인 {len(incomplete)}개, '
+                          f'참조 누락 {len(missing)}개, 제목 구분 {len(renamed)}개, '
+                          f'저장 대상 {len(ready)}개')
+        if incomplete:
+            self.stdout.write('배치 미확인: ' + ', '.join(incomplete))
+        for record, champ_names, item_names in missing:
+            self.stdout.write(f'참조 누락 {record["title"]}: 챔피언 {sorted(champ_names)}, '
+                              f'아이템 {sorted(item_names)}')
+        for old, new in renamed:
+            self.stdout.write(f'제목 구분: {old} → {new}')
+        if options['dry_run']:
+            return
+        if ready:
+            save_records(ready, champions, items)
+        self.stdout.write(self.style.SUCCESS(f'신규 메타 덱 {len(ready)}개 DB 저장 완료'))

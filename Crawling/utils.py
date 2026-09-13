@@ -1,5 +1,6 @@
 import cloudinary.api
 from decouple import config
+import unicodedata
 
 # 데이터 리롤 레벨 찾기
 def reroll_lv(level):
@@ -36,10 +37,41 @@ def item_translation(data):
         return '프라이팬'
 
 # 자카드 유사도 
+def _champion_key(name):
+    return ''.join(unicodedata.normalize('NFKC', name).split()).casefold()
+
+
 def jacaard_similarity(data, data2):
-    set_data = set(data)
-    set_data2 = set(data2)
-    return float(len(set_data.intersection(set_data2)) / len(set_data.union(set_data2)))
+    set_data = {_champion_key(name) for name in data}
+    set_data2 = {_champion_key(name) for name in data2}
+    union = set_data | set_data2
+    return len(set_data & set_data2) / len(union) if union else 0.0
+
+
+def similar_meta_champions(data, data2, prices, threshold=0.8):
+    """Match roster variants while keeping high-cost carry replacements distinct."""
+    left = {_champion_key(name) for name in data}
+    right = {_champion_key(name) for name in data2}
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+
+    removed, added = left - right, right - left
+    normalized_prices = {_champion_key(name): cost for name, cost in prices.items()}
+    # A replacement of a 4+ cost unit usually changes the deck's main carry.
+    if removed and added and any(normalized_prices.get(name, 3) >= 4
+                                 for name in removed | added):
+        return False
+
+    if jacaard_similarity(left, right) >= threshold:
+        return True
+    # Plain Jaccard scores a one-unit swap in an eight-unit board as 7/9.
+    # Treat one low-cost filler replacement as the same comp on 7+ unit boards.
+    return (min(len(left), len(right)) >= 7
+            and len(removed) == len(added) == 1
+            and all(normalized_prices.get(name, 3) <= 2 for name in removed | added)
+            and len(left & right) / min(len(left), len(right)) >= threshold)
 
 
 # cloudnary 이미지 url 가져오기
@@ -63,29 +95,20 @@ def get_img_src(folder_name):
 
     return image_urls
 
-def remove_duplicates_data(data1:dict, data2:dict):
-    data1_duplicate_keys = set()
-    data2_duplicate_keys = set()
-    non_duplicate_keys = []
+def remove_duplicates_data(data1: dict, data2: dict, threshold=0.8, prices=None):
+    """Preserve the first deck when its champion roster is equivalent.
 
-    for d1_key, d1_value in data1.items():
-        for d2_key, d2_value in data2.items():
-            if jacaard_similarity(d1_value['챔프'], d2_value['챔프']) == 1:
-                data1_duplicate_keys.add(d1_key)
-                data2_duplicate_keys.add(d2_key)
-                break 
-            elif d1_key == d2_key:
-                non_duplicate_keys.append(d2_key)
-
-    for d1_key in data1_duplicate_keys:
-        del data1[d1_key]
-
-    for d2_key in data2_duplicate_keys:
-        del data2[d2_key]
-    
-    for key in non_duplicate_keys:
-        data2[f'{key}2'] = data2.pop(key)
-    
-    merge_meta_data = {**data1 , **data2}
-
-    return merge_meta_data
+    Inputs are not mutated. Each value must have a ``챔프`` list; callers may
+    exclude summoned units before comparison.
+    """
+    if not 0 < threshold <= 1:
+        raise ValueError('유사도 기준은 0보다 크고 1 이하여야 합니다.')
+    merged = dict(data1)
+    for key, value in data2.items():
+        if key in merged:
+            raise ValueError(f'중복 메타 덱 키: {key}')
+        if any(similar_meta_champions(value['챔프'], old['챔프'], prices or {}, threshold)
+               for old in merged.values()):
+            continue
+        merged[key] = value
+    return merged
