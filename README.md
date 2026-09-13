@@ -60,15 +60,9 @@ Chrome 및 호환되는 ChromeDriver가 필요합니다. 이름·설명·이미�
 
 시즌18 기초 데이터는 시너지 → 아이템 → 증강체 → 챔피언 순서로 수집합니다.
 
-Linux 배포 환경에서는 Chrome/Chromium과 ChromeDriver가 있으면 이를 사용하고,
-없으면 Firefox와 GeckoDriver로 헤드리스 실행합니다. 실행 파일을 PATH에 두거나
-`CHROME_BIN`, `CHROMEDRIVER_PATH`, `FIREFOX_BIN`, `GECKODRIVER_PATH`로 경로를
-지정하세요. Chrome 크롤러는 `--headless=new`와 독립 프로필을 사용하며,
-ARM64 서버에서는 설치된 드라이버 경로가 필수입니다. Chromium snap의
-`chromium.chromedriver` 명령도 자동으로 찾습니다.
-Chrome이 표시하는 `HeadlessChrome` User-Agent 토큰을 설치된 버전의 일반
-`Chrome` 토큰으로 바꿔 OP.GG 페이지를 요청합니다. 컨테이너에서 root로 실행할
-때만 Chrome의 `--no-sandbox` 옵션을 사용하므로, 가능하면 비권한 사용자로
-실행하세요. 수집 페이지에 접근하지 못하면 명령이 오류를 내고 DB는 변경하지
-않습니다. tactics.tools는 배치를 확인할 수 없는 덱을 저장하지 않고 목록과
-중복 판정에 사용합니다.
+Linux 배포에서는 기존 설정인 `/usr/bin/firefox`와
+`/usr/local/bin/geckodriver`를 사용해 헤드리스로 실행합니다. 다른 위치에
+설치했다면 `FIREFOX_BIN`, `GECKODRIVER_PATH`로 지정하세요. OP.GG에는 기존
+Firefox User-Agent 설정을 적용합니다. Linux 이외 환경은 Chrome을 사용합니다.
+`meta_crawl`은 세 사이트를 모두 수집한 뒤 저장하며, tactics.tools는 배치를
+확인할 수 없는 덱을 저장하지 않고 목록과 중복 판정에 사용합니다.

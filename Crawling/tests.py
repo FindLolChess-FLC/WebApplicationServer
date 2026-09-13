@@ -14,31 +14,34 @@ from Crawling.utils import jacaard_similarity, remove_duplicates_data, similar_m
 
 
 class BrowserTests(unittest.TestCase):
-    @patch.object(crawl_browser, '_firefox_only_linux', return_value=True)
+    @patch.object(crawl_browser, '_is_linux', return_value=True)
+    @patch.object(crawl_browser.Path, 'is_file', return_value=True)
     @patch.object(crawl_browser.webdriver, 'Firefox')
-    def test_linux_firefox_fallback_is_headless(self, firefox, _selector):
-        crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
-        self.assertIn('--headless', firefox.call_args.kwargs['options'].arguments)
-
-    @patch.object(crawl_browser, '_needs_explicit_driver', return_value=True)
-    @patch.object(crawl_browser, '_firefox_only_linux', return_value=False)
-    @patch.object(crawl_browser, '_driver_path', return_value=None)
     @patch.object(crawl_browser.webdriver, 'Chrome')
-    def test_linux_arm_requires_installed_driver(self, chrome, _path, _firefox, _arm):
-        with self.assertRaisesRegex(RuntimeError, 'CHROMEDRIVER_PATH'):
-            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
+    def test_linux_uses_original_headless_firefox_even_with_chromedriver(
+            self, chrome, firefox, _files, _linux):
+        with patch.dict(crawl_browser.os.environ,
+                        {'CHROME_BIN': '/snap/bin/chromium',
+                         'CHROMEDRIVER_PATH': '/snap/bin/chromium.chromedriver'}):
+            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions(),
+                                        firefox_user_agent='test-agent')
+        options = firefox.call_args.kwargs['options']
+        self.assertEqual(options.binary_location, '/usr/bin/firefox')
+        self.assertIn('--headless', options.arguments)
+        self.assertEqual(options.preferences['intl.accept_languages'], 'ko,ko-KR,ko-kr')
+        self.assertEqual(options.preferences['general.useragent.override'], 'test-agent')
+        self.assertEqual(firefox.call_args.kwargs['service'].path,
+                         '/usr/local/bin/geckodriver')
+        firefox.return_value.set_window_size.assert_called_once_with(1440, 900)
         chrome.assert_not_called()
 
-    @patch.object(crawl_browser, '_needs_explicit_driver', return_value=True)
-    @patch.object(crawl_browser, '_firefox_only_linux', return_value=False)
+    @patch.object(crawl_browser, '_is_linux', return_value=True)
+    @patch.object(crawl_browser.Path, 'is_file', return_value=False)
     @patch.object(crawl_browser.webdriver, 'Chrome')
-    def test_linux_arm_uses_snap_chromedriver(self, chrome, _firefox, _arm):
-        with patch.object(crawl_browser, '_driver_path', side_effect=lambda variable, *names:
-                          '/snap/bin/chromium.chromedriver' if variable == 'CHROMEDRIVER_PATH'
-                          else '/snap/bin/chromium'):
+    def test_linux_missing_firefox_fails_without_chrome_fallback(self, chrome, _files, _linux):
+        with self.assertRaisesRegex(RuntimeError, 'GECKODRIVER_PATH'):
             crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
-        self.assertEqual(chrome.call_args.kwargs['service'].path,
-                         '/snap/bin/chromium.chromedriver')
+        chrome.assert_not_called()
 
 
 def card(name='개화', **changes):

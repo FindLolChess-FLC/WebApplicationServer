@@ -1,4 +1,4 @@
-"""Collect OP.GG TFT comps with headless Chrome, including board positions."""
+"""Collect OP.GG TFT comps with a headless browser, including board positions."""
 import tempfile
 
 from selenium import webdriver
@@ -11,6 +11,10 @@ from Crawling.crawl.browser import create_driver
 
 URL = 'https://op.gg/ko/tft/meta-trends/comps'
 CARD_SELECTOR = 'ul.flex.flex-col.gap-1 > li'
+FIREFOX_USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+)
 
 BOARD_SCRIPT = r"""
 const card = arguments[0];
@@ -76,9 +80,8 @@ def validate_record(record):
 def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
     """Read the exact OP.GG comps URL in a headless browser.
 
-    CloudFront currently rejects Chrome's ``HeadlessChrome`` user agent. CDP
-    changes that token before navigation, retaining the installed Chrome
-    version and platform. Linux can also use its existing Firefox/GeckoDriver.
+    Linux uses the deployment Firefox/GeckoDriver paths and original OP.GG
+    user-agent override. Local Chrome changes ``HeadlessChrome`` through CDP.
     """
     options = webdriver.ChromeOptions()
     if headless:
@@ -88,7 +91,8 @@ def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
     options.add_argument('--lang=ko-KR')
     with tempfile.TemporaryDirectory(prefix='flc-opgg-chrome-') as profile:
         options.add_argument(f'--user-data-dir={profile}')
-        driver = create_driver(options, headless=headless, driver_factory=driver_factory)
+        driver = create_driver(options, headless=headless, driver_factory=driver_factory,
+                               firefox_user_agent=FIREFOX_USER_AGENT)
         try:
             driver.set_page_load_timeout(timeout)
             agent = driver.execute_script('return navigator.userAgent')
