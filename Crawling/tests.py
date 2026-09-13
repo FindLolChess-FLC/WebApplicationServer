@@ -20,6 +20,26 @@ class BrowserTests(unittest.TestCase):
         crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
         self.assertIn('--headless', firefox.call_args.kwargs['options'].arguments)
 
+    @patch.object(crawl_browser, '_needs_explicit_driver', return_value=True)
+    @patch.object(crawl_browser, '_firefox_only_linux', return_value=False)
+    @patch.object(crawl_browser, '_driver_path', return_value=None)
+    @patch.object(crawl_browser.webdriver, 'Chrome')
+    def test_linux_arm_requires_installed_driver(self, chrome, _path, _firefox, _arm):
+        with self.assertRaisesRegex(RuntimeError, 'CHROMEDRIVER_PATH'):
+            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
+        chrome.assert_not_called()
+
+    @patch.object(crawl_browser, '_needs_explicit_driver', return_value=True)
+    @patch.object(crawl_browser, '_firefox_only_linux', return_value=False)
+    @patch.object(crawl_browser.webdriver, 'Chrome')
+    def test_linux_arm_uses_snap_chromedriver(self, chrome, _firefox, _arm):
+        with patch.object(crawl_browser, '_driver_path', side_effect=lambda variable, *names:
+                          '/snap/bin/chromium.chromedriver' if variable == 'CHROMEDRIVER_PATH'
+                          else '/snap/bin/chromium'):
+            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
+        self.assertEqual(chrome.call_args.kwargs['service'].path,
+                         '/snap/bin/chromium.chromedriver')
+
 
 def card(name='개화', **changes):
     return {'name': name, 'effect': '효과 설명',

@@ -64,6 +64,8 @@ Linux 배포 환경에서는 Chrome/Chromium과 ChromeDriver가 있으면 이를
 없으면 Firefox와 GeckoDriver로 헤드리스 실행합니다. 실행 파일을 PATH에 두거나
 `CHROME_BIN`, `CHROMEDRIVER_PATH`, `FIREFOX_BIN`, `GECKODRIVER_PATH`로 경로를
 지정하세요. Chrome 크롤러는 `--headless=new`와 독립 프로필을 사용하며,
+ARM64 서버에서는 설치된 드라이버 경로가 필수입니다. Chromium snap의
+`chromium.chromedriver` 명령도 자동으로 찾습니다.
 Chrome이 표시하는 `HeadlessChrome` User-Agent 토큰을 설치된 버전의 일반
 `Chrome` 토큰으로 바꿔 OP.GG 페이지를 요청합니다. 컨테이너에서 root로 실행할
 때만 Chrome의 `--no-sandbox` 옵션을 사용하므로, 가능하면 비권한 사용자로
