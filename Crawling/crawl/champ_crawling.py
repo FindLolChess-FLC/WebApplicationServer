@@ -1,10 +1,12 @@
 """Collect visible season champions and link them to saved synergies."""
 import re
 import tempfile
+import warnings
 from collections import Counter
 from urllib.parse import urlparse
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -12,15 +14,20 @@ from Crawling.crawl.browser import create_driver
 
 
 EXTRACT_SCRIPT = r"""
-const queries = JSON.parse(document.querySelector('#__NEXT_DATA__').textContent)
-  .props.pageProps.dehydratedState.queries;
-const data = Object.assign({}, ...queries.map(query => query.state?.data || {}));
+const payload = document.querySelector('#__NEXT_DATA__');
+if (!payload) return null;
+const queries = JSON.parse(payload.textContent)
+  .props?.pageProps?.dehydratedState?.queries || [];
+const sources = queries.map(query => query.state?.data || {});
+const championSource = sources.find(source => Array.isArray(source.champions));
+const traitSource = sources.find(source => Array.isArray(source.traits));
 const links = Array.from(document.querySelectorAll('a[href^="/champions/set"]'))
   .filter(link => link.querySelector('img[src*="/champions/"]'));
 const shownImages = Array.from(new Map(links.map(link => [
   link.getAttribute('href'), link.querySelector('img').getAttribute('src')
 ])).values());
-return {champions: data.champions, traits: data.traits, shownImages};
+return {champions: championSource?.champions, traits: traitSource?.traits,
+        seasons: [championSource?.season, traitSource?.season], shownImages};
 """
 
 
@@ -63,6 +70,49 @@ def build_records(champions, traits, shown_images):
     return records
 
 
+def _extract_champion_page(driver, season, timeout):
+    """Wait for source data; use it if Firefox cannot render the image cards."""
+    def source_ready(current):
+        result = current.execute_script(EXTRACT_SCRIPT)
+        return result if result and result.get('champions') and result.get('traits') else False
+
+    try:
+        data = WebDriverWait(driver, timeout).until(source_ready)
+    except TimeoutException as exc:
+        raise ValueError(f'시즌{season} 챔피언 페이지 데이터를 기다렸지만 찾지 못했습니다: '
+                         f'{driver.current_url}') from exc
+
+    if data['seasons'] != [f'set{season}', f'set{season}']:
+        raise ValueError(f'시즌{season} 챔피언·시너지 데이터가 아닙니다: {data["seasons"]}')
+
+    expected = Counter(champion['imageUrl'] for champion in data['champions']
+                       if not champion.get('isHidden'))
+    if not expected or None in expected:
+        raise ValueError('챔피언 원본 이미지 목록이 비어 있거나 잘못됐습니다.')
+
+    def images_ready(current):
+        result = current.execute_script(EXTRACT_SCRIPT)
+        return result if result and Counter(result.get('shownImages') or []) == expected else False
+
+    try:
+        rendered = WebDriverWait(driver, min(timeout, 10)).until(images_ready)
+        if rendered['seasons'] != data['seasons']:
+            raise ValueError('챔피언 화면 렌더링 중 시즌 데이터가 변경됐습니다.')
+        return build_records(rendered['champions'], rendered['traits'],
+                             rendered['shownImages'])
+    except TimeoutException:
+        # The official page embeds the complete season data in __NEXT_DATA__.
+        # Headless Firefox can leave the client-rendered card grid empty.
+        latest = driver.execute_script(EXTRACT_SCRIPT)
+        if latest and latest.get('shownImages'):
+            raise ValueError('챔피언 화면 목록과 원본 공개 데이터가 일치하지 않습니다: '
+                             f'{len(latest["shownImages"])} / {sum(expected.values())}개')
+        warnings.warn('챔피언 화면 목록이 렌더링되지 않아 시즌 원본 데이터로 수집합니다.',
+                      stacklevel=2)
+        return build_records(data['champions'], data['traits'],
+                             list(expected.elements()))
+
+
 def collect_champions(season=18, *, headless=True, timeout=30):
     if isinstance(season, bool) or not isinstance(season, int) or season < 1:
         raise ValueError('시즌은 양의 정수여야 합니다.')
@@ -77,16 +127,10 @@ def collect_champions(season=18, *, headless=True, timeout=30):
         try:
             driver.set_page_load_timeout(timeout)
             driver.get(f'https://lolchess.gg/champions/set{season}')
-            WebDriverWait(driver, timeout).until(
-                lambda current: current.find_elements(
-                    By.CSS_SELECTOR, f'a[href^="/champions/set{season}/"]'
-                )
-            )
             if not any(re.search(rf'시즌\s+{season}\s+챔피언', heading.text)
                        for heading in driver.find_elements(By.TAG_NAME, 'h2')):
                 raise ValueError(f'요청한 시즌{season} 페이지가 아닙니다: {driver.current_url}')
-            data = driver.execute_script(EXTRACT_SCRIPT)
-            return build_records(data['champions'], data['traits'], data['shownImages'])
+            return _extract_champion_page(driver, season, timeout)
         finally:
             driver.quit()
 

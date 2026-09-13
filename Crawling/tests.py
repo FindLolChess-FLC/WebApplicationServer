@@ -294,6 +294,42 @@ class CloudinaryAssetTests(unittest.TestCase):
 
 
 class ChampionTests(unittest.TestCase):
+    def page_data(self, shown_images):
+        return {'champions': [
+            {'name': '라칸', 'cost': [1], 'traits': ['Fae'],
+             'imageUrl': 'https://cdn.example.com/rakan.jpg'}],
+            'traits': [{'key': 'Fae', 'name': '요정'}],
+            'seasons': ['set18', 'set18'], 'shownImages': shown_images}
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_headless_empty_card_grid_uses_complete_season_source(self, wait):
+        driver = MagicMock()
+        driver.execute_script.return_value = self.page_data([])
+        wait.return_value.until.side_effect = [
+            self.page_data([]), TimeoutException('grid not rendered')]
+        with self.assertWarnsRegex(UserWarning, '원본 데이터'):
+            records = champion_crawler._extract_champion_page(driver, 18, 30)
+        self.assertEqual([record['name'] for record in records], ['라칸'])
+        self.assertEqual(records[0]['img_src'], 'https://cdn.example.com/rakan.jpg')
+        self.assertEqual(wait.call_args_list[1].args[1], 10)
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_partial_card_grid_does_not_silently_use_source(self, wait):
+        driver = MagicMock()
+        driver.execute_script.return_value = self.page_data(['unmatched-image'])
+        wait.return_value.until.side_effect = [
+            self.page_data([]), TimeoutException('partial grid')]
+        with self.assertRaisesRegex(ValueError, '화면 목록과 원본'):
+            champion_crawler._extract_champion_page(driver, 18, 30)
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_source_season_must_match_requested_season(self, wait):
+        driver = MagicMock()
+        wait.return_value.until.return_value = {
+            **self.page_data([]), 'seasons': ['set17', 'set18']}
+        with self.assertRaisesRegex(ValueError, '시즌18'):
+            champion_crawler._extract_champion_page(driver, 18, 30)
+
     def test_public_champion_maps_first_cost_and_trait_name(self):
         image = 'https://cdn.example.com/rakan.jpg'
         champions = [
