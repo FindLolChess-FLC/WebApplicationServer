@@ -17,6 +17,9 @@ return Array.from(document.querySelectorAll('.tc-summary-wrap')).map(card => {
         .filter(image => image.parentElement.className.includes('mx-[3px]'));
     return {
         title: card.querySelector('.text-lg.pl-1')?.textContent.trim(),
+        tips: Array.from(card.querySelectorAll(
+            'div.flex.flex-col.gap-2.text-sm.font-montserrat.font-medium > div > .truncate'
+        ), tag => tag.textContent.trim()).filter(Boolean),
         champions: images.map(image => ({
             name: image.alt,
             star: 0,
