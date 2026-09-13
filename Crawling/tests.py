@@ -9,6 +9,7 @@ from Crawling.crawl import item_crawling as item_crawler
 from Crawling.crawl import augmenter_crawling as augment_crawler
 from Crawling.crawl import champ_crawling as champion_crawler
 from Crawling.crawl import browser as crawl_browser
+from Crawling.crawl import cloudinary_assets
 from Crawling.img_crawl import save_item as item_images
 from Crawling.crawl.lolchess_crawling import parse_lolchess_meta
 from Crawling.utils import jacaard_similarity, remove_duplicates_data, similar_meta_champions
@@ -152,6 +153,17 @@ class SynergyTests(unittest.TestCase):
 
 
 class ItemTests(unittest.TestCase):
+    @patch.object(item_crawler, 'WebDriverWait')
+    @patch.object(item_crawler, 'ActionChains')
+    def test_tooltip_retries_after_missed_firefox_hover(self, actions, wait):
+        driver, image = MagicMock(), MagicMock()
+        wait.return_value.until.side_effect = [
+            TimeoutException('first hover lost'), {'effect': '방어력 증가'}]
+        result = item_crawler._tooltip(driver, image, '적응형 투구', 30)
+        self.assertEqual(result['effect'], '방어력 증가')
+        self.assertEqual(actions.return_value.move_to_element.return_value.perform.call_count, 3)
+        self.assertEqual(wait.call_count, 2)
+
     def components(self):
         return [
             {
@@ -224,6 +236,61 @@ class AugmentTests(unittest.TestCase):
                 [{'name': '꽃', 'desc': '효과', 'imageUrl': 'https://cdn.example.com/a.png', 'tier': 2}],
                 [{'name': '다른 이름', 'img_src': 'https://cdn.example.com/a.png'}],
             )
+
+
+class CloudinaryAssetTests(unittest.TestCase):
+    def test_public_id_uses_same_folder_and_filename_as_uploader(self):
+        self.assertEqual(cloudinary_assets.public_id_for(
+            'augment', {'name': '꽃 +', 'tier': 'Gold'}), 'tft/증강/골드/꽃+')
+        self.assertEqual(cloudinary_assets.public_id_for(
+            'item', {'name': '적응형 투구'}), 'tft/아이템/적응형투구')
+
+    @patch.object(cloudinary_assets, 'config', return_value='dcc862pgc')
+    @patch.object(cloudinary_assets.cloudinary, 'config')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources_by_ids')
+    def test_admin_lookup_preserves_actual_versioned_urls_and_plus_names(
+            self, bulk, single, _configure, _config):
+        url = 'https://res.cloudinary.com/dcc862pgc/image/upload/v123/tft/item.png'
+        bulk.return_value = {'resources': [
+            {'public_id': 'tft/증강/골드/꽃', 'secure_url': url}]}
+        single.return_value = {'resources': [
+            {'public_id': 'tft/증강/골드/꽃+',
+             'secure_url': url.replace('v123', 'v456')}]}
+        original = [{'name': '꽃', 'tier': 'Gold', 'img_src': 'source'},
+                    {'name': '꽃+', 'tier': 'Gold', 'img_src': 'source'}]
+        result = cloudinary_assets.resolve_existing_urls('augment', original)
+        self.assertEqual([row['img_src'] for row in result],
+                         [url, url.replace('v123', 'v456')])
+        self.assertEqual(original[0]['img_src'], 'source')
+        bulk.assert_called_once_with(['tft/증강/골드/꽃'], max_results=1,
+                                     resource_type='image', type='upload')
+        single.assert_called_once_with(resource_type='image', type='upload',
+                                       prefix='tft/증강/골드/꽃+', max_results=100)
+
+    @patch.object(cloudinary_assets, 'config', return_value='dcc862pgc')
+    @patch.object(cloudinary_assets.cloudinary, 'config')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources_by_ids',
+                  return_value={'resources': []})
+    def test_missing_asset_cannot_be_saved_as_fabricated_url(self, *_mocks):
+        with self.assertRaisesRegex(ValueError, 'tft/아이템/적응형투구'):
+            cloudinary_assets.resolve_existing_urls(
+                'item', [{'name': '적응형 투구', 'img_src': 'source'}])
+
+    @patch('Crawling.management.commands.data_crawl.save_synergies')
+    @patch('Crawling.management.commands.data_crawl.resolve_existing_urls',
+           side_effect=ValueError('missing image'))
+    @patch('Crawling.management.commands.data_crawl.synergy_crawling',
+           return_value=[{'name': '개화'}])
+    def test_data_crawl_stops_before_db_write_on_missing_asset(
+            self, collect, _resolve, save):
+        from io import StringIO
+        from Crawling.management.commands.data_crawl import Command
+
+        with self.assertRaisesRegex(ValueError, 'missing image'):
+            Command(stdout=StringIO()).handle()
+        collect.assert_called_once_with(dry_run=True)
+        save.assert_not_called()
 
 
 class ChampionTests(unittest.TestCase):

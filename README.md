@@ -29,6 +29,11 @@ python manage.py champion_images
 # tft/시너지/<이름>.svg, tft/아이템/<이름>.png 등 한글 경로를 사용합니다.
 python manage.py upload_media_cdn
 
+# 배포 서버에서는 이미지 파일을 내려받거나 업로드하지 않습니다.
+# 이미 올려둔 Cloudinary 자산의 public ID로 Admin API에서 실제 secure_url을 조회해 저장합니다.
+# CLOUDNARY_NAME, CLOUDNARY_KEY, CLOUDNARY_SECRET이 필요합니다.
+python manage.py data_crawl
+
 # lolchess.gg 시즌18 추천 메타 덱을 DB 참조와 대조한 뒤 저장합니다.
 # 메타 덱의 소환 유닛 이미지는 tft/챔피언에 내려받아 Cloudinary에 올리고,
 # 가격 0 챔피언 및 배치 정보도 함께 저장합니다.
@@ -51,14 +56,16 @@ python manage.py meta_crawl --dry-run
 python -m unittest Crawling.tests -v
 ```
 
-Chrome 및 호환되는 ChromeDriver가 필요합니다. 이름·설명·이미지는 가이드에서,
+Windows 로컬 실행에는 Chrome 및 호환되는 ChromeDriver가 필요합니다. 이름·설명·이미지는 가이드에서,
 활성 인원별 등급은 통계 페이지에서 수집합니다. 통계에 없는 특성은 경고를 내고
-빈 sequence로 보존합니다. 크롤링 직후에는 이미지에 원본 CDN URL을 사용하며,
-`upload_media_cdn` 실행 후 Cloudinary URL로 바뀝니다. 재수집하면 원본 URL로
-갱신되므로 로컬 이미지 다운로드와 CDN 업로드 명령을 다시 실행해야 합니다.
+빈 sequence로 보존합니다. `data_crawl`은 시너지·챔피언·아이템·증강체를
+차례대로 수집하고 각 단계에서 Cloudinary에 업로드된 실제 이미지 URL을 조회해
+저장합니다. 없는 자산은 URL을 만들어 넣지 않고 해당 단계의 저장을 중단합니다.
+개별 수집 명령의 `--save`는 원본 URL을 저장하므로 CDN 업로드 작업을 할 때만
+사용하세요.
 재수집 저장은 이름 기준으로 갱신하며, 과거 시즌 데이터 삭제는 수행하지 않습니다.
 
-시즌18 기초 데이터는 시너지 → 아이템 → 증강체 → 챔피언 순서로 수집합니다.
+시즌18 기초 데이터는 시너지 → 챔피언 → 아이템 → 증강체 순서로 수집합니다.
 
 Linux 배포에서는 기존 설정인 `/usr/bin/firefox`와
 `/usr/local/bin/geckodriver`를 사용해 헤드리스로 실행합니다. 다른 위치에

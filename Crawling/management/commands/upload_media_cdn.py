@@ -11,20 +11,13 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from Meta.models import AugmenterImg, ChampionImg, ItemImg, SynergyImg
+from Crawling.crawl.cloudinary_assets import FOLDERS, safe_name
 
 
 ROOT = Path('tft')
 EXTENSIONS = ('.svg', '.png', '.jpg', '.webp')
-FOLDERS = {'Silver': '실버', 'Gold': '골드', 'prism': '프리즘'}
-
-
-def _safe_name(name):
-    return ''.join(char for char in name.replace(' ', '')
-                   if char not in '<>:"/\\|?*')
-
-
 def _local_file(folder, name):
-    stem = _safe_name(name)
+    stem = safe_name(name)
     matches = [folder / f'{stem}{extension}' for extension in EXTENSIONS
                if (folder / f'{stem}{extension}').is_file()]
     if len(matches) != 1:

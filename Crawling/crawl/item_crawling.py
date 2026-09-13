@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -18,13 +19,14 @@ from Crawling.utils import item_translation
 TOOLTIP_SCRIPT = r"""
 const expected = arguments[0];
 const strong = Array.from(document.querySelectorAll('body strong')).find(node =>
-    node.offsetParent !== null &&
+    node.getClientRects().length > 0 &&
+    getComputedStyle(node).visibility !== 'hidden' &&
     node.textContent.replace(/\s+/g, '') === expected.replace(/\s+/g, '') &&
     Array.from(node.parentElement.children).some(child => child.tagName === 'P')
 );
 if (!strong) return null;
 const root = strong.parentElement;
-return {
+const result = {
     name: strong.textContent.trim(),
     effect: Array.from(root.children)
         .filter(child => child.tagName === 'P')
@@ -32,6 +34,7 @@ return {
     recipe_srcs: Array.from(root.querySelectorAll('ul img'))
         .map(image => image.getAttribute('src')),
 };
+return result.effect ? result : null;
 """
 
 
@@ -105,11 +108,28 @@ def build_records(cards, components):
 
 
 def _tooltip(driver, target, name, timeout):
-    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", target)
-    ActionChains(driver).move_to_element(target).perform()
-    return WebDriverWait(driver, timeout).until(
-        lambda current: current.execute_script(TOOLTIP_SCRIPT, name)
-    )
+    for attempt in range(3):
+        if attempt:
+            # Firefox occasionally drops a hover while scrolling a long grid.
+            # Move off the card so a fresh mouseenter can fire on the retry.
+            ActionChains(driver).move_to_element(
+                driver.find_element(By.TAG_NAME, 'h2')).perform()
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", target)
+        ActionChains(driver).move_to_element(target).perform()
+        if attempt == 2:
+            # React tooltips also listen to mouseover; this handles a missed
+            # native event in headless Firefox without changing the page.
+            driver.execute_script(
+                "arguments[0].dispatchEvent(new MouseEvent('mouseover', {bubbles:true}));",
+                target,
+            )
+        try:
+            return WebDriverWait(driver, max(1, timeout / 3)).until(
+                lambda current: current.execute_script(TOOLTIP_SCRIPT, name)
+            )
+        except TimeoutException:
+            if attempt == 2:
+                raise
 
 
 def collect_items(season=18, *, headless=True, timeout=30):
