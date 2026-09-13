@@ -455,13 +455,19 @@ class LolchessMetaTests(unittest.TestCase):
 
 
 class MetaSimilarityTests(unittest.TestCase):
-    def test_one_low_cost_swap_and_extra_flex_unit_are_duplicates(self):
+    def test_one_low_cost_swap_is_distinct_but_extra_flex_is_duplicate(self):
         prices = dict.fromkeys('ABCDEFGHI', 1)
         prices.update({'G': 4, 'H': 5})
         original = list('ABCDEFGH')
-        self.assertLess(jacaard_similarity(original, list('ACDEFGHI')), 0.8)
-        self.assertTrue(similar_meta_champions(original, list('ACDEFGHI'), prices))
+        self.assertLess(jacaard_similarity(original, list('ACDEFGHI')), 0.85)
+        self.assertFalse(similar_meta_champions(original, list('ACDEFGHI'), prices))
         self.assertTrue(similar_meta_champions(original, list('ABCDEFGHI'), prices))
+
+    def test_added_high_cost_carry_is_distinct(self):
+        prices = dict.fromkeys('ABCDEFGHI', 1)
+        prices['I'] = 5
+        self.assertFalse(similar_meta_champions(list('ABCDEFGH'),
+                                                list('ABCDEFGHI'), prices))
 
     def test_high_cost_carry_swap_is_distinct_even_above_jaccard_threshold(self):
         prices = dict.fromkeys('ABCDEFGHIJK', 1)
@@ -476,6 +482,6 @@ class MetaSimilarityTests(unittest.TestCase):
                     'different': {'챔프': list('JKLMNOPQ')}}
         prices = dict.fromkeys('ABCDEFGHIJKLMNOPQ', 1)
         result = remove_duplicates_data(old, incoming, prices=prices)
-        self.assertEqual(list(result), ['old', 'different'])
+        self.assertEqual(list(result), ['old', 'variant', 'different'])
         self.assertEqual(list(old), ['old'])
         self.assertEqual(list(incoming), ['variant', 'different'])

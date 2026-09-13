@@ -43,8 +43,8 @@ python manage.py lolchess_meta_crawl --season 18
 python manage.py lolchess_meta_crawl --season 18 --dry-run
 
 # 세 사이트(lolchess.gg, OP.GG, tactics.tools)를 한 번에 수집합니다.
-# 기존 DB 및 사이트 간 Jaccard 0.8 또는 저코스트 한 명 교체 덱을 제외합니다.
-# 4코스트 이상 챔피언 교체는 별도 덱으로 유지합니다.
+# 기존 DB 및 사이트 간 Jaccard 0.85 이상인 덱을 제외합니다.
+# 챔피언 한 명 교체 및 4코스트 이상 챔피언 추가·교체는 별도 덱으로 유지합니다.
 # 서로 다른 덱의 제목이 같으면 제목 2, 제목 3처럼 번호를 붙입니다.
 # 실제 배치를 확인할 수 없는 덱은 위치를 추정하지 않고 저장에서 제외합니다.
 python manage.py meta_crawl

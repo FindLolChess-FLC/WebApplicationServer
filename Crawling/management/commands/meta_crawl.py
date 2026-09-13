@@ -47,7 +47,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true')
-        parser.add_argument('--similarity', type=float, default=0.8)
+        parser.add_argument('--similarity', type=float, default=0.85)
 
     def handle(self, *args, **options):
         threshold = options['similarity']
