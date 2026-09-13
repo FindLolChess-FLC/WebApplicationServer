@@ -1,5 +1,22 @@
 from rest_framework import serializers
+from django.db.models import Prefetch
 from .models import Champion, ChampionImg, Synergy, SynergyImg, Item, ItemImg, LolMeta, LolMetaChampion, Augmenter, AugmenterImg, MetaReaction, Comment
+
+
+def meta_placements_queryset():
+    """Load one meta's nested champion, trait, item, and image data in batches."""
+    return (LolMetaChampion.objects
+            .select_related('champion', 'champion__championimg')
+            .prefetch_related(
+                Prefetch('champion__synergy',
+                         queryset=Synergy.objects.select_related('synergyimg')),
+                Prefetch('item', queryset=Item.objects.select_related('itemimg')),
+            )
+            .order_by('champion__price'))
+
+
+def meta_details_prefetch():
+    return Prefetch('lolmetachampion_set', queryset=meta_placements_queryset())
 
 
 # 챔피언 이미지
@@ -110,14 +127,17 @@ class LolMetaSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'like_count', 'dislike_count', 'reroll_lv', 'champions']
 
     def get_champions(self, instance):
-        lol_meta_champions = instance.lolmetachampion_set.all().select_related('champion').order_by('champion__price')
+        lol_meta_champions = getattr(instance, '_prefetched_objects_cache', {}).get(
+            'lolmetachampion_set')
+        if lol_meta_champions is None:
+            lol_meta_champions = meta_placements_queryset().filter(meta=instance)
         return LolMetaChampionSerializer(lol_meta_champions, many=True).data
 
     # 응답 커스텀
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if not instance.lolmetachampion_set.exists():
+        if not representation['champions']:
             representation.pop('champions', None)
 
         return representation

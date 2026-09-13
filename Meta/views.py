@@ -4,9 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
-from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
+from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer, meta_details_prefetch
 from django.utils import timezone
-from django.db.models import F, Q
+from django.db.models import F, Q, prefetch_related_objects
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -16,6 +16,49 @@ from .schema import lol_meta_schema, champion_response_schema
 from .utils import find_db
 
 import re
+
+
+def _meta_response_data(metas):
+    """Build the existing meta response from a bounded set of DB queries."""
+    if not metas:
+        return []
+    prefetch_related_objects(metas, meta_details_prefetch())
+    synergies_by_name = {synergy.name: synergy for synergy in
+                         Synergy.objects.select_related('synergyimg')}
+    data = []
+    for meta in metas:
+        meta_synergy = {}
+        for placed in meta.lolmetachampion_set.all():
+            for synergy in placed.champion.synergy.all():
+                if synergy.name not in meta_synergy:
+                    meta_synergy[synergy.name] = {
+                        'number': 0, 'effect': synergy.effect,
+                        'img_src': synergy.synergyimg.img_src,
+                        'sequence': synergy.sequence,
+                    }
+                meta_synergy[synergy.name]['number'] += 1
+
+            for item in placed.item.all():
+                if '상징' not in item.name:
+                    continue
+                name = ''.join(re.findall(r'[^ 상징]', item.name))
+                if name not in meta_synergy:
+                    synergy = synergies_by_name[name]
+                    meta_synergy[name] = {
+                        'number': 0, 'effect': synergy.effect,
+                        'img_src': synergy.synergyimg.img_src,
+                        'sequence': synergy.sequence,
+                    }
+                meta_synergy[name]['number'] += 1
+
+        sorted_synergies = dict(sorted(
+            meta_synergy.items(),
+            key=lambda entry: ('unique' in entry[1]['sequence'], entry[1]['number']),
+            reverse=True,
+        ))
+        data.append({'meta': LolMetaSerializer(meta).data,
+                     'synergys': [sorted_synergies]})
+    return data
 
 # 챔피언 조회
 class ChampionSearchView(APIView):
@@ -83,11 +126,8 @@ class UseChampionSearchView(APIView):
     )
 
     def get(self, request):
-        lol_meta_champions = LolMetaChampion.objects.all()
-        champions = []
-        for champ in lol_meta_champions:
-            if champ.champion.name not in champions:
-                champions.append(champ.champion.name)
+        champions = list(dict.fromkeys(
+            LolMetaChampion.objects.values_list('champion__name', flat=True)))
 
         return Response({'resultcode': 'SUCCESS', 'data': champions}, status=status.HTTP_200_OK)
         
@@ -327,50 +367,12 @@ class MetaSearchView(APIView):
                     [:3] 
                     )
         else:
-            metas = LolMeta.objects.all().order_by('-like_count').distinct()
+            metas = LolMeta.objects.all().order_by('-like_count')
 
         paginator = MetaPagination()
         paginated_metas = paginator.paginate_queryset(metas, request)
     
-        data = []
-
-        for meta in paginated_metas:
-            meta_data = {
-                'meta': LolMetaSerializer(meta).data,
-                'synergys': []
-            }
-            meta_synergy = {}
-
-            meta_champions = LolMetaChampion.objects.filter(meta=meta)
-
-            for meta_champion in meta_champions:
-                if meta.id == meta_champion.meta.id:
-                    synergys = meta_champion.champion.synergy.all()
-                    items = meta_champion.item.all()
-
-                    for synergy in synergys:
-                        if synergy.name not in meta_synergy:
-                            meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src, 'sequence': synergy.sequence}
-                        meta_synergy[synergy.name]['number'] += 1
-
-                    if len(items) > 0 :
-                        for item in items:
-                            if '상징' in item.name :
-                                synergy = ''.join(re.findall(r'[^ 상징]',item.name))
-
-                                if synergy not in meta_synergy:
-                                    meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                                meta_synergy[synergy]['number'] += 1
-
-
-            meta_data['synergys'].append(
-                                        dict(sorted(meta_synergy.items(), key=lambda x: (
-                                            'unique' in x[1]['sequence'],  
-                                            x[1]['number']
-                                        ), reverse=True))
-                                    )
-            data.append(meta_data)
-
+        data = _meta_response_data(paginated_metas)
         return paginator.get_paginated_response(data)
     
     @swagger_auto_schema(
@@ -407,43 +409,7 @@ class MetaSearchView(APIView):
         
         total_data = find_db(search_data)
             
-        data = []
-
-        for meta in total_data:
-            meta_champion = LolMetaChampionSerializer(LolMetaChampion.objects.filter(meta__title=meta.title), many=True).data
-            meta_data = {
-                'meta': LolMetaSerializer(meta).data,
-                'synergys': [],
-            }
-            meta_synergy = {}
-
-            for champion in meta_champion:
-                champ_synergy = champion['champion'].get('synergy')
-                
-                if champ_synergy:
-                    for synergy in champ_synergy:
-                        if synergy not in meta_synergy:
-                            meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                        meta_synergy[synergy]['number'] += 1
-
-                if 'item' in champion:
-                    champ_item = champion['item']
-
-                    for item in champ_item:
-                        if '상징' in item['name'] :
-                            synergy = ''.join(re.findall(r'[^ 상징]',item['name']))
-                            
-                            if synergy not in meta_synergy:
-                                meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                            meta_synergy[synergy]['number'] += 1
-
-            meta_data['synergys'].append(
-                                        dict(sorted(meta_synergy.items(), key=lambda x: (
-                                            'unique' in x[1]['sequence'],  
-                                            x[1]['number']
-                                        ), reverse=True))
-                                    )
-            data.append(meta_data)
+        data = _meta_response_data(total_data)
 
         if data == []:
             return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
@@ -704,7 +670,6 @@ class DeleteReactionView(APIView):
             return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
             
         return Response({'resultcode': 'FAIL', 'message': '잘못된 접근입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # 댓글 조회
 class CheckCommentView(APIView):
@@ -1017,4 +982,3 @@ class DeleteCommentView(APIView):
             return Response({'resultcode': 'SUCCESS', 'message': '댓글 삭제가 완료되었습니다.'},status=status.HTTP_200_OK)
         
         return Response({'resultcode': 'FAIL', 'message': '잘못된 접근입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-    
