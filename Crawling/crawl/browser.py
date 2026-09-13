@@ -29,6 +29,8 @@ def create_driver(chrome_options, *, headless=True, driver_factory=None,
 
         options = FirefoxOptions()
         options.set_preference('intl.accept_languages', 'ko,ko-KR,ko-kr')
+        # The crawlers explicitly wait for their data; unrelated images may load slowly.
+        options.page_load_strategy = 'eager'
         if headless:
             options.add_argument('--headless')
         options.binary_location = firefox_binary

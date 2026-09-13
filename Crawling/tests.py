@@ -2,6 +2,7 @@
 import unittest
 import json
 from unittest.mock import MagicMock, patch
+from selenium.common.exceptions import TimeoutException
 
 from Crawling.crawl import synergy_crawling as crawler
 from Crawling.crawl import item_crawling as item_crawler
@@ -28,6 +29,7 @@ class BrowserTests(unittest.TestCase):
         options = firefox.call_args.kwargs['options']
         self.assertEqual(options.binary_location, '/usr/bin/firefox')
         self.assertIn('--headless', options.arguments)
+        self.assertEqual(options.page_load_strategy, 'eager')
         self.assertEqual(options.preferences['intl.accept_languages'], 'ko,ko-KR,ko-kr')
         self.assertEqual(options.preferences['general.useragent.override'], 'test-agent')
         self.assertEqual(firefox.call_args.kwargs['service'].path,
@@ -50,6 +52,23 @@ def card(name='개화', **changes):
 
 
 class SynergyTests(unittest.TestCase):
+    def test_navigation_timeout_uses_loaded_synergy_dom(self):
+        driver = MagicMock()
+        driver.get.side_effect = TimeoutException('secondary resource timed out')
+        driver.find_elements.return_value = ['trait']
+        self.assertEqual(crawler._navigate_to_synergies(
+            driver, 'https://lolchess.gg/synergies/set18/guide', 'div.header > h4', 0),
+            ['trait'])
+        driver.get.assert_called_once()
+
+    def test_empty_synergy_page_retries_once(self):
+        driver = MagicMock()
+        driver.find_elements.side_effect = [[], ['trait']]
+        self.assertEqual(crawler._navigate_to_synergies(
+            driver, 'https://lolchess.gg/synergies/set18/guide', 'div.header > h4', 0),
+            ['trait'])
+        self.assertEqual(driver.get.call_count, 2)
+
     def test_order_by_count_preserves_repeated_tier(self):
         rows = [{'label': '11 개화', 'tier': 'chromatic'},
                 {'label': '7 개화', 'tier': 'gold'},
