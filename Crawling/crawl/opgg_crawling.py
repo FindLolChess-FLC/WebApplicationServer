@@ -1,82 +1,150 @@
+"""Collect OP.GG TFT comps with headless Chrome, including board positions."""
+import os
+import tempfile
+
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver import ActionChains
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
 
-import time
 
-# op.gg 크롤링
+URL = 'https://op.gg/ko/tft/meta-trends/comps'
+CARD_SELECTOR = 'ul.flex.flex-col.gap-1 > li'
+
+BOARD_SCRIPT = r"""
+const card = arguments[0];
+const board = card.querySelector('div.flex.h-\\[192px\\]');
+const grid = board?.querySelector(':scope > div > div');
+if (!grid) return null;
+const rows = Array.from(grid.children).filter(row => row.children.length === 7);
+if (rows.length !== 4) return null;
+const champions = [];
+rows.forEach((row, rowIndex) => {
+    Array.from(row.children).forEach((cell, columnIndex) => {
+        const image = cell.querySelector('img[src*="/tft-champion/"]');
+        if (!image) return;
+        const stars = cell.querySelector('div.absolute.-top-1')?.querySelectorAll('svg').length || 1;
+        champions.push({
+            name: image.alt,
+            location: rowIndex * 7 + columnIndex + 1,
+            star: stars,
+            items: Array.from(cell.querySelectorAll('img[src*="/tft-item/"]'), item => item.alt),
+        });
+    });
+});
+return {title: card.querySelector('strong')?.textContent.trim(), champions};
+"""
+
+SUMMARY_SCRIPT = r"""
+const card = arguments[0];
+const images = Array.from(card.querySelectorAll('img[src*="/tft-champion/"]'))
+    .filter(image => !image.closest('div.flex.h-\\[192px\\]'));
+return {
+    title: card.querySelector('strong')?.textContent.trim(),
+    champions: images.map(image => {
+        const container = image.closest('div.relative.h-\\[32px\\]');
+        return {name: image.alt, location: 0, star: 0,
+            items: Array.from(container?.querySelectorAll('img[src*="/tft-item/"]') || [], item => item.alt)};
+    }),
+    complete: false,
+};
+"""
+
+
+def validate_record(record):
+    if not record or not record.get('title') or len(record['title']) > 50:
+        raise ValueError(f'OP.GG 덱 제목이 비어 있거나 너무 깁니다: {record}')
+    slots = record.get('champions') or []
+    if not 5 <= len(slots) <= 28:
+        raise ValueError(f'{record["title"]}: 챔피언 배치 {len(slots)}개')
+    locations = set()
+    for slot in slots:
+        if (not slot.get('name') or len(slot['items']) > 3
+                or any(not name for name in slot['items'])):
+            raise ValueError(f'{record["title"]}: 잘못된 챔피언 배치 {slot}')
+        if record.get('complete'):
+            if (not 1 <= slot['location'] <= 28 or slot['location'] in locations
+                    or not 1 <= slot['star'] <= 3):
+                raise ValueError(f'{record["title"]}: 잘못된 챔피언 배치 {slot}')
+            locations.add(slot['location'])
+        elif slot['location'] != 0 or slot['star'] != 0:
+            raise ValueError(f'{record["title"]}: 부분 수집에 실제 위치·별 값이 섞였습니다.')
+    return record
+
+
+def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
+    """Read the exact OP.GG comps URL using a fresh Chrome profile.
+
+    CloudFront currently rejects Chrome's ``HeadlessChrome`` user agent. CDP
+    changes that token before navigation, retaining the installed Chrome
+    version and platform on Linux deployments.
+    """
+    options = webdriver.ChromeOptions()
+    if headless:
+        options.add_argument('--headless=new')
+    if hasattr(os, 'geteuid') and os.geteuid() == 0:
+        options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--window-size=1440,900')
+    options.add_argument('--lang=ko-KR')
+    if os.environ.get('CHROME_BIN'):
+        options.binary_location = os.environ['CHROME_BIN']
+    with tempfile.TemporaryDirectory(prefix='flc-opgg-chrome-') as profile:
+        options.add_argument(f'--user-data-dir={profile}')
+        if driver_factory:
+            driver = driver_factory(options=options)
+        else:
+            service_path = os.environ.get('CHROMEDRIVER_PATH')
+            driver = webdriver.Chrome(
+                options=options,
+                service=Service(executable_path=service_path) if service_path else None,
+            )
+        try:
+            driver.set_page_load_timeout(timeout)
+            agent = driver.execute_script('return navigator.userAgent')
+            if headless and 'HeadlessChrome/' in agent:
+                driver.execute_cdp_cmd('Network.setUserAgentOverride', {
+                    'userAgent': agent.replace('HeadlessChrome/', 'Chrome/'),
+                    'acceptLanguage': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                })
+            driver.get(URL)
+            try:
+                WebDriverWait(driver, timeout).until(
+                    lambda d: d.find_elements(By.CSS_SELECTOR, CARD_SELECTOR))
+            except TimeoutException as exc:
+                raise ValueError(f'OP.GG 덱 목록을 찾지 못했습니다: {driver.title} ({driver.current_url})') from exc
+            if '시즌 18' not in driver.title:
+                raise ValueError(f'OP.GG 시즌 18 페이지가 아닙니다: {driver.title}')
+            count = len(driver.find_elements(By.CSS_SELECTOR, CARD_SELECTOR))
+            records = []
+            for index in range(count):
+                card = driver.find_elements(By.CSS_SELECTOR, CARD_SELECTOR)[index]
+                driver.execute_script('arguments[0].scrollIntoView({block:"center"})', card)
+                card.find_element(By.CSS_SELECTOR, 'strong').click()
+                try:
+                    record = WebDriverWait(driver, min(timeout, 5)).until(
+                        lambda d: (row if row and len(row['champions']) >= 5 else False)
+                        if (row := d.execute_script(BOARD_SCRIPT, card)) is not None else False)
+                    record['complete'] = True
+                except TimeoutException:
+                    record = driver.execute_script(SUMMARY_SCRIPT, card)
+                records.append(validate_record(record))
+            return records
+        finally:
+            driver.quit()
+
+
 def opgg_crawling():
-    url = 'https://op.gg/ko/tft/meta-trends/comps'
-    driver = webdriver.Chrome()
-
-    driver.get(url)
-    driver.implicitly_wait(1)
-
-    # 메타 데이터 크롤링
-    crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'ul.flex.flex-col.gap-1 > li')
-    meta_title = []
-    meta_champ = []
-    meta_champ_location = []
-    meta_champ_item = []
-    meta_champ_star = []
-    meta_data = {} 
-
-    # 챔프, 제목 정보 추출
-    for meta in crawl_meta:
-        driver.execute_script("arguments[0].scrollIntoView(true);", meta)
-        meta_title.append(meta.find_element(By.CSS_SELECTOR, 'div.flex.items-center.gap-1.text-\[12px\].leading-\[16px\].text-gray-0.md\:w-full.md\:gap-\[8px\].md\:text-\[14px\].md\:leading-\[20px\] > strong').text)
-        meta_champ.append([champ.get_attribute('alt') for champ in meta.find_elements(By.CSS_SELECTOR, 'div > div:nth-child(2) > div:nth-child(2) > div > div:nth-child(2) > div > img')])
-
-        act = ActionChains(driver)
-        act.move_to_element(meta.find_element(By.CSS_SELECTOR, 'div.flex.w-full.flex-row.items-center.justify-between.gap-2.md\:basis-\[400px\].md\:flex-col.md\:items-start.md\:px-0.md\:py-\[15px\].md\:pr-\[16px\] > button')).click().perform()
-    
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(2)
-    detail_meta = driver.find_elements(By.CSS_SELECTOR, 'div > div.flex.h-\[192px\].w-full.flex-col.items-center.justify-center.md\:mt-1.md\:h-auto.md\:justify-start')
-    print('디테일', detail_meta)
-
-    for detail in detail_meta:
-        detail_champion = detail.find_elements(By.CSS_SELECTOR, 'div.\-mt-2.flex.gap-1.first\:mt-0.md\:gap-2.\[\&\:nth-child\(even\)\]\:ml-\[22px\].md\:\[\&\:nth-child\(even\)\]\:ml-10 > div')
-        location = {}
-        item = {}
-        star = {}
-        for index, champion in enumerate(detail_champion, 1):
-            champ_location = champion.find_elements(By.CSS_SELECTOR, 'div > div > div > img')
-
-            # 챔피언이 있으면 위치 추출
-            if champ_location:
-                name = champ_location[0].get_attribute('alt')
-                location[name] = index
-
-                # 아이템 추출
-                item_data = champion.find_elements(By.CSS_SELECTOR, 'div.absolute.bottom-0.z-10.flex.w-full.items-center.justify-center.gap-px > div > div > img')
-
-                if item_data: 
-                    detail_item = []
-
-                    for champ_item in item_data:
-                        detail_item.append(champ_item.get_attribute('alt'))
-                    item[name] = detail_item
-
-                # 별 추출
-                champ_star = champion.find_elements(By.CSS_SELECTOR, 'div.absolute.-top-1.flex.w-full.items-center.justify-center > svg')
-
-                if champ_star:
-                    star[name] = len(champ_star)
-                else:
-                    star[name] = 2
-
-        meta_champ_location.append(location)
-        meta_champ_item.append(item)
-        meta_champ_star.append(star)
-
-    # 최종 메타 데이터 구성
-    for num in range(len(meta_title)):
-        meta_data[meta_title[num]] = {
-            '챔프': meta_champ[num],
-            '별': meta_champ_star[num],
-            '위치': meta_champ_location[num],
-            '아이템': meta_champ_item[num]
+    """Legacy shape used by the older three-site management command."""
+    result = {}
+    for record in collect_opgg_meta():
+        if not record['complete']:
+            continue
+        result[record['title']] = {
+            '챔프': [slot['name'] for slot in record['champions']],
+            '별': {slot['name']: slot['star'] for slot in record['champions']},
+            '위치': {slot['name']: slot['location'] for slot in record['champions']},
+            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
         }
-    
-    return meta_data
+    return result
