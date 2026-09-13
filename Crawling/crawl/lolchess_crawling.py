@@ -1,102 +1,106 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
-import re
-from Meta.models import * 
-    
-# lolchess.gg 크롤링
+"""Collect LoLCHESS.GG recommended comps from the server-rendered meta page."""
+import json
+from html.parser import HTMLParser
+
+import requests
+
+
+class _NextDataParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.in_next_data = False
+        self.data = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'script' and dict(attrs).get('id') == '__NEXT_DATA__':
+            self.in_next_data = True
+
+    def handle_endtag(self, tag):
+        if tag == 'script':
+            self.in_next_data = False
+
+    def handle_data(self, data):
+        if self.in_next_data:
+            self.data.append(data)
+
+
+def _query_data(queries, key):
+    for query in queries:
+        if query.get('queryKey', [None])[0] == key:
+            return query['state']['data']
+    raise ValueError(f'lolchess.gg 응답에 {key} 데이터가 없습니다.')
+
+
+def parse_lolchess_meta(html, season=18):
+    parser = _NextDataParser()
+    parser.feed(html)
+    if not parser.data:
+        raise ValueError('lolchess.gg 응답에서 __NEXT_DATA__를 찾지 못했습니다.')
+    queries = json.loads(''.join(parser.data))['props']['pageProps']['dehydratedState']['queries']
+    champion_refs = _query_data(queries, 'championRefs')
+    item_refs = _query_data(queries, 'itemRefs')
+    guide_data = _query_data(queries, 'getGuideDecks')
+    expected_season = f'set{season}'
+    if champion_refs['season'] != expected_season or item_refs['season'] != expected_season:
+        raise ValueError(f'lolchess.gg 데이터가 {expected_season}이 아닙니다.')
+    champions = {entry['key']: entry for entry in champion_refs['champions']}
+    items = {entry['key']: entry['name'] for entry in item_refs['items']}
+    records = []
+    seen_ids = set()
+    for guide in guide_data['guideDecks']:
+        if guide.get('season') != expected_season or guide['data'].get('set') != expected_season:
+            continue
+        guide_id = guide['teamBuilderKey']
+        if guide_id in seen_ids:
+            raise ValueError(f'중복 가이드 ID: {guide_id}')
+        seen_ids.add(guide_id)
+        slots = []
+        for slot in guide['data']['slots']:
+            if slot['champion'] not in champions:
+                raise ValueError(f"알 수 없는 챔피언: {slot['champion']}")
+            unknown_items = set(slot.get('items', [])) - items.keys()
+            if unknown_items:
+                raise ValueError(f'알 수 없는 아이템: {sorted(unknown_items)}')
+            slots.append({
+                'name': champions[slot['champion']]['name'],
+                'star': slot.get('star', 1),
+                'location': slot['index'] + 1,
+                'items': [items[key] for key in slot.get('items', [])],
+                'is_summon': champions[slot['champion']].get('isHidden', False)
+                             and champions[slot['champion']].get('cost', [None])[0] == 0,
+                'image_url': champions[slot['champion']]['imageUrl'],
+            })
+        if len(slots) < 5:
+            continue
+        records.append({
+            'id': guide_id,
+            'title': guide['name'].strip(),
+            'season': season,
+            'source_url': f'https://lolchess.gg/builder/guide/{guide_id}?type=guide',
+            'champions': slots,
+        })
+    if not records:
+        raise ValueError(f'lolchess.gg에서 {expected_season} 메타 덱을 찾지 못했습니다.')
+    if len({record['title'] for record in records}) != len(records):
+        raise ValueError('메타 덱 제목이 중복되어 DB 저장 시 구별할 수 없습니다.')
+    return records
+
+
+def collect_lolchess_meta(season=18, *, timeout=30):
+    response = requests.get('https://lolchess.gg/meta', timeout=timeout,
+                            headers={'User-Agent': 'Mozilla/5.0'})
+    response.raise_for_status()
+    return parse_lolchess_meta(response.text, season=season)
+
+
 def lolchess_crawling():
-    url = 'https://lolchess.gg/meta'
-    
-    service = Service('/usr/local/bin/geckodriver')
-    options = Options()
-    options.set_preference("intl.accept_languages", "ko,ko-KR,ko-kr")
-    options.add_argument("--headless")
-    options.binary_location = '/usr/bin/firefox'
-    driver = webdriver.Firefox(service=service, options=options)
-
-    driver.get(url)
-    driver.implicitly_wait(5)
-    
-    # 메타 데이터 크롤링
-    crawl_meta = driver.find_elements(By.CSS_SELECTOR, 'div.css-s9pipd.e2kj5ne0 > div')
-    crawl_meta_link = driver.find_elements(By.CSS_SELECTOR, 'div.css-cchicn.emls75t7 > div.link-wrapper > a')
-    
-    meta_link = [link.get_attribute('href') for link in crawl_meta_link]
-    meta_title = []
-    meta_champ = []
-    meta_champ_location = []
-    meta_champ_item = []
-    meta_champ_star = []
-    meta_data = {} 
-
-    # 챔프, 제목 정보 추출
-    for meta in crawl_meta:
-        text = meta.text
-        if '공략 더 보기' in text:
-            meta_title.append(re.split(r'\n', text)[0])
-
-    # 각 링크에 대한 상세 정보 크롤링
-    for link in meta_link:
-        driver.get(link)
-        driver.implicitly_wait(10)
-
-        detail = driver.find_elements(By.CSS_SELECTOR, 'div.Board.css-y6vj5x.e1mgaavq0 > div')
-        crawl_item_data = driver.find_elements(By.CSS_SELECTOR, 'div.css-13yc51h.erj04nc0' )
-        detail_meta_champ = []
-        detail_champ_star = {}
-        detail_champ_item = {}
-        item_translation = {}
-
-        # 아이템 상세 정보 추출
-        if crawl_item_data:
-            for item in crawl_item_data:
-                driver.execute_script("arguments[0].scrollIntoView(true);", item)
-                item_img = item.find_element(By.CSS_SELECTOR, 'div.selectedItem > img').get_attribute('src')
-                result_item = ''.join(re.findall(r'/images/items/([^_]+)_', item_img))
-                item_name = item.find_element(By.CSS_SELECTOR, 'div.selectedItem').text
-                item_translation[result_item] = item_name
-        
-        for champ in detail:
-            champ_text = champ.text.replace(' ', '')
-            detail_meta_champ.append(champ_text)
-
-            # 챔피언 이름이 공백이 아닌 경우에만 처리
-            if champ_text:
-                # 아이템 추출
-                img_elements = champ.find_elements(By.TAG_NAME, 'img')
-                if img_elements:  # img 태그가 있을 경우에만 처리
-                    detail_champ_item[champ_text] = [
-                        item_translation.get(
-                            (re.findall(r'/images/items/([^_]+)_', i.get_attribute('src')) or [''])[0])
-                        for i in img_elements
-                    ]
-
-
-                # 별 개수 추출
-                star_elements = champ.find_elements(By.CSS_SELECTOR, 'div.css-11hlchy.e1k9xd3h2 > div')
-                if star_elements:  # 별 관련 요소가 있을 경우에만 처리
-                    detail_champ_star[champ_text] = sum(
-                        len(star.find_elements(By.TAG_NAME, 'div')) for star in star_elements
-                    )
-
-        meta_champ.append([champ for champ in detail_meta_champ if champ])
-
-        # 챔프 위치 정보 추출
-        meta_champ_location.append(
-            {champ: index for index, champ in enumerate(detail_meta_champ, 1) if champ}
-        )
-        meta_champ_item.append(detail_champ_item)
-        meta_champ_star.append(detail_champ_star)
-
-    # 최종 메타 데이터 구성
-    for num in range(len(meta_link)):
-        meta_data[meta_title[num]] = {
-            '챔프': meta_champ[num],
-            '별': meta_champ_star[num],
-            '위치': meta_champ_location[num],
-            '아이템': meta_champ_item[num]
+    """Legacy shape used by the existing multi-source meta command."""
+    return {
+        record['title']: {
+            '챔프': [slot['name'] for slot in record['champions']],
+            '별': {slot['name']: slot['star'] for slot in record['champions']},
+            '위치': {slot['name']: slot['location'] for slot in record['champions']},
+            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
         }
-
-    return meta_data
+        for record in collect_lolchess_meta()
+    }
