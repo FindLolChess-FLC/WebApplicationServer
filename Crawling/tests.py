@@ -153,16 +153,78 @@ class SynergyTests(unittest.TestCase):
 
 
 class ItemTests(unittest.TestCase):
-    @patch.object(item_crawler, 'WebDriverWait')
-    @patch.object(item_crawler, 'ActionChains')
-    def test_tooltip_retries_after_missed_firefox_hover(self, actions, wait):
-        driver, image = MagicMock(), MagicMock()
-        wait.return_value.until.side_effect = [
-            TimeoutException('first hover lost'), {'effect': '방어력 증가'}]
-        result = item_crawler._tooltip(driver, image, '적응형 투구', 30)
-        self.assertEqual(result['effect'], '방어력 증가')
-        self.assertEqual(actions.return_value.move_to_element.return_value.perform.call_count, 3)
-        self.assertEqual(wait.call_count, 2)
+    def test_visible_item_uses_serialized_description_and_recipe(self):
+        source = {'items': [
+            {'key': 'Helm', 'name': '적응형 투구',
+             'imageUrl': 'https://cdn.example.com/helm.png',
+             'desc': '마나 증가<br><br>방어력 증가',
+             'compositions': ['Cloak', 'Tear']},
+            {'key': 'Cloak', 'name': '음전자 망토', 'desc': '저항력 증가',
+             'imageUrl': 'https://cdn.example.com/cloak.png'},
+            {'key': 'Tear', 'name': '여신의 눈물', 'desc': '마나 증가',
+             'imageUrl': 'https://cdn.example.com/tear.png'},
+        ]}
+        card = item_crawler._source_card(
+            '적응형 투구', 'https://cdn.example.com/helm.png', source)
+        self.assertEqual(card['effect'], '마나 증가 방어력 증가')
+        self.assertEqual(card['recipe_srcs'],
+                         ['https://cdn.example.com/cloak.png',
+                          'https://cdn.example.com/tear.png'])
+        with self.assertRaisesRegex(ValueError, '일치하지'):
+            item_crawler._source_card('적응형 투구',
+                                     'https://cdn.example.com/wrong.png', source)
+
+    def test_browser_percent_encoding_matches_source_korean_filename(self):
+        source = {'items': [{
+            'key': 'Radiant', 'name': '빛나는 크라켄의 분노',
+            'desc': '효과', 'imageUrl': 'https://cdn.example.com/크라켄.jpg'}]}
+        row = item_crawler._source_card(
+            '빛나는 크라켄의 분노',
+            'https://cdn.example.com/%ED%81%AC%EB%9D%BC%EC%BC%84.jpg', source)
+        self.assertEqual(row['effect'], '효과')
+
+    def test_recipe_url_matches_encoded_component_image(self):
+        components = self.components()
+        components[0]['img_src'] = 'https://cdn.example.com/%EA%B2%80.png'
+        cards = [{'name': '완성 아이템', 'effect': '효과',
+                  'img_src': 'https://cdn.example.com/completed.png',
+                  'recipe_srcs': ['https://cdn.example.com/검.png',
+                                  components[1]['img_src']]}]
+        result = item_crawler.build_records(cards, components)
+        self.assertEqual(result[0]['item1'], '재료 0')
+
+    def test_augmented_emblem_reference_keeps_longer_compatible_effect(self):
+        source = {'items': [
+            {'key': 'FloraEmblem', 'name': '꽃 상징', 'desc': '특성 획득',
+             'imageUrl': 'https://cdn.example.com/emblem.png'},
+            {'key': 'FloraEmblemAugment', 'name': '꽃 상징',
+             'desc': '특성 획득. 효과 50% 증가',
+             'imageUrl': 'https://cdn.example.com/emblem.png'},
+        ]}
+        row = item_crawler._source_card(
+            '꽃 상징', 'https://cdn.example.com/emblem.png', source)
+        self.assertEqual(row['effect'], '특성 획득. 효과 50% 증가')
+
+    def test_game_mode_variant_uses_base_key_for_shared_image(self):
+        source = {'items': [
+            {'key': 'Blade', 'name': '도박꾼의 칼날', 'desc': '공격 속도 1%',
+             'imageUrl': 'https://cdn.example.com/blade.png'},
+            {'key': 'BladeHR', 'name': '도박꾼의 칼날', 'desc': '공격 속도 2%',
+             'imageUrl': 'https://cdn.example.com/blade.png'},
+        ]}
+        row = item_crawler._source_card(
+            '도박꾼의 칼날', 'https://cdn.example.com/blade.png', source)
+        self.assertEqual(row['effect'], '공격 속도 1%')
+
+    def test_component_translation_can_differ_from_source_display_name(self):
+        source = {'items': [{'key': 'BFSword', 'name': 'B.F. Sword',
+                             'desc': '공격력 +10',
+                             'imageUrl': 'https://cdn.example.com/BFSword.png'}]}
+        row = item_crawler._source_card(
+            'B.F. 대검', 'https://cdn.example.com/BFSword.png',
+            source, component=True)
+        self.assertEqual(row['name'], 'B.F. 대검')
+        self.assertEqual(row['effect'], '공격력 +10')
 
     def components(self):
         return [
