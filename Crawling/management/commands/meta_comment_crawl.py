@@ -67,14 +67,6 @@ def guide_text(html):
     return parser.text()
 
 
-def split_paragraphs(text, *, source='lolchess'):
-    """Return self-contained comments, with no markup, label, or newline."""
-    blocks = text.splitlines() if source == 'tactics' else re.split(r'\n\s*\n+', text)
-    return [paragraph for block in blocks
-            if (paragraph := ' '.join(line.strip() for line in block.splitlines()
-                                   if line.strip()))]
-
-
 def parse_lolchess_guide(html, record):
     parser = _NextDataParser()
     parser.feed(html)
@@ -165,8 +157,8 @@ def select_writer(writer_id=None):
     raise CommandError('슈퍼관리자 계정이 여러 개입니다. --writer-id로 댓글 작성자를 지정하세요.')
 
 
-def sync_comments(writer, source, meta, paragraphs):
-    """Replace the old tagged comment and reconcile only crawler-owned rows."""
+def sync_comments(writer, source, meta, content):
+    """Keep one plain-text comment and collapse any old paragraph comments."""
     links = list(CrawledMetaComment.objects.select_for_update().filter(
         source=source, meta_id=meta.pk).order_by('position'))
     if [link.position for link in links] != list(range(len(links))):
@@ -183,27 +175,32 @@ def sync_comments(writer, source, meta, paragraphs):
                                     content__startswith=legacy_prefix)
     if links:
         legacy = legacy.exclude(pk__in=comments)
-    removed = legacy.count()
-    legacy.delete()
-
-    created = updated = unchanged = 0
-    for position, text in enumerate(paragraphs):
-        if position < len(links):
-            comment = comments[links[position].comment_id]
-            if comment.content != text:
-                comment.content = text
-                comment.save(update_fields=['content'])
-                updated += 1
-            else:
-                unchanged += 1
+    created = updated = unchanged = removed = 0
+    if links:
+        keeper = comments[links[0].comment_id]
+        removed += legacy.count()
+        legacy.delete()
+    else:
+        keeper = legacy.order_by('pk').first()
+        if keeper is not None:
+            extras = legacy.exclude(pk=keeper.pk)
+            removed += extras.count()
+            extras.delete()
         else:
-            comment = Comment.objects.create(writer=writer, lol_meta=meta, content=text)
-            CrawledMetaComment.objects.create(
-                source=source, meta_id=meta.pk, position=position,
-                comment_id=comment.pk)
+            keeper = Comment.objects.create(writer=writer, lol_meta=meta, content=content)
             created += 1
+        CrawledMetaComment.objects.create(
+            source=source, meta_id=meta.pk, position=0,
+            comment_id=keeper.pk)
 
-    for link in links[len(paragraphs):]:
+    if keeper.content != content:
+        keeper.content = content
+        keeper.save(update_fields=['content'])
+        updated += 1
+    elif not created:
+        unchanged += 1
+
+    for link in links[1:]:
         comments[link.comment_id].delete()
         link.delete()
         removed += 1
@@ -256,12 +253,9 @@ class Command(BaseCommand):
             if meta is None:
                 unmatched.append(f'{source}: {record["title"]}')
                 continue
-            paragraphs = split_paragraphs(text, source=source)
-            if paragraphs:
-                ready[(source, meta.pk)] = (source, meta, paragraphs)
-        self.stdout.write(f'댓글 연결 대상 {len(ready)}개, 문단 댓글 '
-                          f'{sum(len(row[2]) for row in ready.values())}개, '
-                          f'대응 덱 없음 {len(unmatched)}개')
+            if text.strip():
+                ready[(source, meta.pk)] = (source, meta, text.strip())
+        self.stdout.write(f'댓글 연결 대상 {len(ready)}개, 대응 덱 없음 {len(unmatched)}개')
         for title in unmatched:
             self.stdout.write(f'건너뜀: {title}')
         if options['dry_run'] or not ready:
@@ -273,12 +267,12 @@ class Command(BaseCommand):
         writer = select_writer(options['writer_id'])
         created = updated = unchanged = removed = 0
         with transaction.atomic():
-            for source, meta, paragraphs in ready.values():
-                counts = sync_comments(writer, source, meta, paragraphs)
+            for source, meta, content in ready.values():
+                counts = sync_comments(writer, source, meta, content)
                 created += counts[0]
                 updated += counts[1]
                 unchanged += counts[2]
                 removed += counts[3]
         self.stdout.write(self.style.SUCCESS(
-            f'슈퍼관리자 {writer.pk} 문단 댓글 생성 {created}개, 수정 {updated}개, '
+            f'슈퍼관리자 {writer.pk} 덱 설명 댓글 생성 {created}개, 수정 {updated}개, '
             f'유지 {unchanged}개, 이전 댓글 제거 {removed}개'))
