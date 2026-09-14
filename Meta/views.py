@@ -731,7 +731,7 @@ class CheckCommentView(APIView):
         if user_id:
             filter_conditions['writer'] = user_id
 
-        comments = Comment.objects.filter(**filter_conditions)
+        comments = Comment.objects.filter(**filter_conditions).order_by('id')
 
         if comments.exists():
             serializer = CommentSerializer(comments, many=True)

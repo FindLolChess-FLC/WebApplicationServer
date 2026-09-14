@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from django.test import SimpleTestCase
 
 from Crawling.management.commands.meta_comment_crawl import (
-    guide_text, match_meta, parse_lolchess_guide,
+    guide_text, match_meta, parse_lolchess_guide, split_paragraphs,
 )
 from Meta.serializers import CommentSerializer
 
@@ -42,6 +42,14 @@ class MetaCommentCrawlTests(SimpleTestCase):
 
     def test_long_guide_is_not_truncated(self):
         self.assertEqual(len(guide_text('<p>' + '가' * 600 + '</p>')), 600)
+
+    def test_paragraphs_become_plain_separate_comments(self):
+        text = '개요\n\n· 덱 난이도: 보통\n· 빠른 9레벨\n\n챔피언 & 아이템'
+        self.assertEqual(split_paragraphs(text), [
+            '개요', '· 덱 난이도: 보통 · 빠른 9레벨', '챔피언 & 아이템',
+        ])
+        self.assertTrue(all('\n' not in part and '[' not in part
+                            for part in split_paragraphs(text)))
 
     def test_numbered_title_uses_champion_roster(self):
         exact = SimpleNamespace(pk=1, title='덱')

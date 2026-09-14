@@ -7,11 +7,12 @@ from html.parser import HTMLParser
 import requests
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 
 from Crawling.crawl.lolchess_crawling import _NextDataParser, collect_lolchess_meta
 from Crawling.crawl.opgg_crawling import collect_opgg_meta
 from Crawling.crawl.tactics_crawling import collect_tactics_meta
+from Crawling.models import CrawledMetaComment
 from Meta.models import Comment, LolMeta, LolMetaChampion
 
 
@@ -64,6 +65,14 @@ def guide_text(html):
     parser = _GuideText()
     parser.feed(html)
     return parser.text()
+
+
+def split_paragraphs(text, *, source='lolchess'):
+    """Return self-contained comments, with no markup, label, or newline."""
+    blocks = text.splitlines() if source == 'tactics' else re.split(r'\n\s*\n+', text)
+    return [paragraph for block in blocks
+            if (paragraph := ' '.join(line.strip() for line in block.splitlines()
+                                   if line.strip()))]
 
 
 def parse_lolchess_guide(html, record):
@@ -156,6 +165,51 @@ def select_writer(writer_id=None):
     raise CommandError('슈퍼관리자 계정이 여러 개입니다. --writer-id로 댓글 작성자를 지정하세요.')
 
 
+def sync_comments(writer, source, meta, paragraphs):
+    """Replace the old tagged comment and reconcile only crawler-owned rows."""
+    links = list(CrawledMetaComment.objects.select_for_update().filter(
+        source=source, meta_id=meta.pk).order_by('position'))
+    if [link.position for link in links] != list(range(len(links))):
+        raise CommandError(f'{meta.title}: 수집 댓글 순서가 연속되지 않습니다.')
+    comments = {comment.pk: comment for comment in Comment.objects.select_for_update().filter(
+        pk__in=[link.comment_id for link in links])}
+    for link in links:
+        comment = comments.get(link.comment_id)
+        if comment is None or comment.writer_id != writer.pk or comment.lol_meta_id != meta.pk:
+            raise CommandError(f'{meta.title}: 수집 댓글의 소유 정보가 일치하지 않습니다.')
+
+    legacy_prefix = f'[{SOURCE_LABELS[source]}]\n'
+    legacy = Comment.objects.filter(writer=writer, lol_meta=meta,
+                                    content__startswith=legacy_prefix)
+    if links:
+        legacy = legacy.exclude(pk__in=comments)
+    removed = legacy.count()
+    legacy.delete()
+
+    created = updated = unchanged = 0
+    for position, text in enumerate(paragraphs):
+        if position < len(links):
+            comment = comments[links[position].comment_id]
+            if comment.content != text:
+                comment.content = text
+                comment.save(update_fields=['content'])
+                updated += 1
+            else:
+                unchanged += 1
+        else:
+            comment = Comment.objects.create(writer=writer, lol_meta=meta, content=text)
+            CrawledMetaComment.objects.create(
+                source=source, meta_id=meta.pk, position=position,
+                comment_id=comment.pk)
+            created += 1
+
+    for link in links[len(paragraphs):]:
+        comments[link.comment_id].delete()
+        link.delete()
+        removed += 1
+    return created, updated, unchanged, removed
+
+
 class Command(BaseCommand):
     help = '세 메타 사이트의 덱 설명/팁을 기존 덱에 슈퍼관리자 댓글로 저장합니다.'
 
@@ -202,28 +256,29 @@ class Command(BaseCommand):
             if meta is None:
                 unmatched.append(f'{source}: {record["title"]}')
                 continue
-            prefix = f'[{SOURCE_LABELS[source]}]\n'
-            ready[(source, meta.pk)] = (meta, prefix, prefix + text)
-        self.stdout.write(f'댓글 연결 대상 {len(ready)}개, 대응 덱 없음 {len(unmatched)}개')
+            paragraphs = split_paragraphs(text, source=source)
+            if paragraphs:
+                ready[(source, meta.pk)] = (source, meta, paragraphs)
+        self.stdout.write(f'댓글 연결 대상 {len(ready)}개, 문단 댓글 '
+                          f'{sum(len(row[2]) for row in ready.values())}개, '
+                          f'대응 덱 없음 {len(unmatched)}개')
         for title in unmatched:
             self.stdout.write(f'건너뜀: {title}')
         if options['dry_run'] or not ready:
             return
 
+        if CrawledMetaComment._meta.db_table not in connection.introspection.table_names():
+            raise CommandError('댓글 추적 테이블이 없습니다. python manage.py migrate Crawling을 먼저 실행하세요.')
+
         writer = select_writer(options['writer_id'])
-        created = updated = unchanged = 0
+        created = updated = unchanged = removed = 0
         with transaction.atomic():
-            for meta, prefix, content in ready.values():
-                comment = Comment.objects.filter(writer=writer, lol_meta=meta,
-                                                 content__startswith=prefix).order_by('pk').first()
-                if comment is None:
-                    Comment.objects.create(writer=writer, lol_meta=meta, content=content)
-                    created += 1
-                elif comment.content != content:
-                    comment.content = content
-                    comment.save(update_fields=['content'])
-                    updated += 1
-                else:
-                    unchanged += 1
+            for source, meta, paragraphs in ready.values():
+                counts = sync_comments(writer, source, meta, paragraphs)
+                created += counts[0]
+                updated += counts[1]
+                unchanged += counts[2]
+                removed += counts[3]
         self.stdout.write(self.style.SUCCESS(
-            f'슈퍼관리자 {writer.pk} 댓글 생성 {created}개, 수정 {updated}개, 유지 {unchanged}개'))
+            f'슈퍼관리자 {writer.pk} 문단 댓글 생성 {created}개, 수정 {updated}개, '
+            f'유지 {unchanged}개, 이전 댓글 제거 {removed}개'))
