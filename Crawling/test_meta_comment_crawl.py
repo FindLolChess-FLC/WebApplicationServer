@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from Crawling.management.commands.meta_comment_crawl import (
     guide_text, match_meta, parse_lolchess_guide,
 )
+from Meta.serializers import CommentSerializer
 
 
 class MetaCommentCrawlTests(SimpleTestCase):
@@ -26,8 +27,18 @@ class MetaCommentCrawlTests(SimpleTestCase):
         html = '<script id="__NEXT_DATA__" type="application/json">' + json.dumps(
             data, ensure_ascii=False) + '</script>'
         self.assertEqual(parse_lolchess_guide(html, record),
-                         '개요\n운영 팁\n아이템 추천')
+                         '개요\n\n운영 팁\n아이템 추천')
         self.assertNotIn('제외할 내용', parse_lolchess_guide(html, record))
+
+    def test_api_hides_crawler_marker_and_preserves_paragraphs(self):
+        comment = SimpleNamespace(
+            writer=SimpleNamespace(is_superuser=True),
+            content='[롤체지지 덱 설명]\n개요\n\n운영 팁\n아이템 추천',
+        )
+        self.assertEqual(CommentSerializer().get_content(comment),
+                         '개요\n\n운영 팁\n아이템 추천')
+        comment.writer.is_superuser = False
+        self.assertTrue(CommentSerializer().get_content(comment).startswith('[롤체지지'))
 
     def test_long_guide_is_not_truncated(self):
         self.assertEqual(len(guide_text('<p>' + '가' * 600 + '</p>')), 600)

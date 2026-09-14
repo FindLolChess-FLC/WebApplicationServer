@@ -30,13 +30,17 @@ class _GuideText(HTMLParser):
         self.parts = []
 
     def handle_starttag(self, tag, attrs):
-        if tag in ('br', 'hr', 'p', 'div', 'h1', 'h2', 'h3', 'h4'):
+        if tag in ('h1', 'h2', 'h3', 'h4'):
+            self.parts.append('\n\n')
+        elif tag in ('br', 'hr', 'p', 'div'):
             self.parts.append('\n')
         elif tag == 'li':
             self.parts.append('\n• ')
 
     def handle_endtag(self, tag):
-        if tag in ('p', 'div', 'li', 'h1', 'h2', 'h3', 'h4'):
+        if tag in ('p', 'div', 'h1', 'h2', 'h3', 'h4'):
+            self.parts.append('\n\n')
+        elif tag == 'li':
             self.parts.append('\n')
 
     def handle_data(self, data):
@@ -45,7 +49,15 @@ class _GuideText(HTMLParser):
     def text(self):
         lines = (re.sub(r'[ \t\xa0]+', ' ', line).strip()
                  for line in ''.join(self.parts).splitlines())
-        return '\n'.join(line for line in lines if line)
+        result = []
+        for line in lines:
+            if line:
+                result.append(line)
+            elif result and result[-1]:
+                result.append('')
+        while result and not result[-1]:
+            result.pop()
+        return '\n'.join(result)
 
 
 def guide_text(html):
