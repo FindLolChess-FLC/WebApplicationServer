@@ -52,6 +52,16 @@ python manage.py meta_crawl
 # 세 사이트 수집·중복 판정만 확인하고 DB는 변경하지 않습니다.
 python manage.py meta_crawl --dry-run
 
+# 기존 메타 덱에 연결할 설명을 확인합니다. DB 댓글은 변경하지 않습니다.
+python manage.py meta_comment_crawl --dry-run
+
+# 롤체지지의 일반 덱 설명만 슈퍼관리자 댓글로 저장합니다.
+python manage.py meta_comment_crawl --source lolchess
+
+# 세 사이트의 설명·팁을 확인해 연결 가능한 댓글만 저장합니다.
+# 슈퍼관리자가 여러 명이고 닉네임 admin이 없다면 --writer-id <ID>를 지정합니다.
+python manage.py meta_comment_crawl
+
 # DB가 필요 없는 회귀 테스트
 python -m unittest Crawling.tests -v
 ```
@@ -73,3 +83,10 @@ Linux 배포에서는 기존 설정인 `/usr/bin/firefox`와
 Firefox User-Agent 설정을 적용합니다. Linux 이외 환경은 Chrome을 사용합니다.
 `meta_crawl`은 세 사이트를 모두 수집한 뒤 저장하며, tactics.tools는 배치를
 확인할 수 없는 덱을 저장하지 않고 목록과 중복 판정에 사용합니다.
+
+`meta_comment_crawl`은 먼저 저장된 메타 덱이 있어야 합니다. 롤체지지에서는
+덱 제목과 일치하는 일반 설명만 읽고 레벨별 탭과 추천 증강체 탭은 제외합니다.
+출처별 슈퍼관리자 댓글을 재실행 시 갱신하며 일반 사용자 댓글은 건드리지
+않습니다. OP.GG는 현재 덱별 설명이 없어 저장을 건너뛰고, tactics.tools의
+짧은 전략 태그는 제목과 챔피언 구성이 일치하는 기존 메타에만 연결합니다.
+이 명령은 이미지 업로드나 로컬 파일 저장을 하지 않습니다.
