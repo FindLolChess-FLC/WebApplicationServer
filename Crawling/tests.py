@@ -10,6 +10,7 @@ from Crawling.crawl import augmenter_crawling as augment_crawler
 from Crawling.crawl import champ_crawling as champion_crawler
 from Crawling.crawl import browser as crawl_browser
 from Crawling.crawl import cloudinary_assets
+from Crawling.crawl import lolchess_crawling as lolchess_crawler
 from Crawling.img_crawl import save_item as item_images
 from Crawling.crawl.lolchess_crawling import parse_lolchess_meta
 from Crawling.utils import jacaard_similarity, remove_duplicates_data, similar_meta_champions
@@ -419,6 +420,27 @@ class ChampionTests(unittest.TestCase):
 
 
 class LolchessMetaTests(unittest.TestCase):
+    @patch.object(lolchess_crawler.requests, 'get')
+    def test_current_korean_meta_url_uses_direct_response(self, get):
+        response = MagicMock(status_code=200, text='<html>ok</html>')
+        get.return_value = response
+        self.assertEqual(lolchess_crawler.fetch_lolchess_html(
+            lolchess_crawler.META_URL), '<html>ok</html>')
+        get.assert_called_once_with(
+            'https://lolchess.gg/meta?hl=ko', timeout=30,
+            headers=lolchess_crawler.REQUEST_HEADERS)
+
+    @patch.object(lolchess_crawler.requests, 'get')
+    def test_403_retries_with_deployment_browser(self, get):
+        get.return_value = MagicMock(status_code=403)
+        driver = MagicMock(page_source='<script id="__NEXT_DATA__">{}</script>')
+        factory = MagicMock(return_value=driver)
+        result = lolchess_crawler.fetch_lolchess_html(
+            lolchess_crawler.META_URL, driver_factory=factory)
+        self.assertIn('__NEXT_DATA__', result)
+        driver.get.assert_called_once_with('https://lolchess.gg/meta?hl=ko')
+        driver.quit.assert_called_once()
+
     def test_hidden_zero_cost_unit_is_kept_with_source_image(self):
         champion_refs = {'season': 'set18', 'champions': [
             {'key': 'Hero', 'name': '영웅', 'cost': [1],
@@ -452,6 +474,8 @@ class LolchessMetaTests(unittest.TestCase):
                          'https://cdn.lolchess.gg/summon.png')
         self.assertFalse(record['champions'][1]['is_summon'])
         self.assertEqual(record['champions'][1]['items'], ['검'])
+        self.assertEqual(record['source_url'],
+                         'https://lolchess.gg/builder/guide/guide1?type=guide&hl=ko')
 
 
 class MetaSimilarityTests(unittest.TestCase):

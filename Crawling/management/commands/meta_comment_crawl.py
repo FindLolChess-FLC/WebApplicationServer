@@ -9,7 +9,9 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 
-from Crawling.crawl.lolchess_crawling import _NextDataParser, collect_lolchess_meta
+from Crawling.crawl.lolchess_crawling import (
+    _NextDataParser, collect_lolchess_meta, fetch_lolchess_html,
+)
 from Crawling.crawl.opgg_crawling import collect_opgg_meta
 from Crawling.crawl.tactics_crawling import collect_tactics_meta
 from Crawling.models import CrawledMetaComment
@@ -91,14 +93,12 @@ def parse_lolchess_guide(html, record):
     return guide_text(main[0].get('content') or '') if main else ''
 
 
-def collect_lolchess_comments(*, timeout=30, workers=5):
+def collect_lolchess_comments(*, timeout=30, workers=1):
     records = collect_lolchess_meta(timeout=timeout)
 
     def fetch(record):
-        response = requests.get(record['source_url'], timeout=timeout,
-                                headers={'User-Agent': 'Mozilla/5.0'})
-        response.raise_for_status()
-        return record, parse_lolchess_guide(response.text, record)
+        html = fetch_lolchess_html(record['source_url'], timeout=timeout)
+        return record, parse_lolchess_guide(html, record)
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         return [(record, content) for record, content in pool.map(fetch, records) if content]

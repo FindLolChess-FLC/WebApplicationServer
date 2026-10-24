@@ -1,8 +1,28 @@
 """Collect LoLCHESS.GG recommended comps from the server-rendered meta page."""
 import json
+import tempfile
 from html.parser import HTMLParser
 
 import requests
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+
+from Crawling.crawl.browser import create_driver
+
+
+META_URL = 'https://lolchess.gg/meta?hl=ko'
+BROWSER_USER_AGENT = (
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+)
+REQUEST_HEADERS = {
+    'User-Agent': BROWSER_USER_AGENT,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,'
+              'image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': 'https://lolchess.gg/',
+}
 
 
 class _NextDataParser(HTMLParser):
@@ -22,6 +42,41 @@ class _NextDataParser(HTMLParser):
     def handle_data(self, data):
         if self.in_next_data:
             self.data.append(data)
+
+
+def fetch_lolchess_html(url, *, timeout=30, driver_factory=None):
+    """Fetch normally, then use the deployment browser when the server gets 403."""
+    response = requests.get(url, timeout=timeout, headers=REQUEST_HEADERS)
+    if response.status_code != 403:
+        response.raise_for_status()
+        return response.text
+
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--window-size=1440,900')
+    options.add_argument('--lang=ko-KR')
+    with tempfile.TemporaryDirectory(prefix='flc-lolchess-browser-') as profile:
+        options.add_argument(f'--user-data-dir={profile}')
+        driver = create_driver(
+            options, driver_factory=driver_factory,
+            firefox_user_agent=BROWSER_USER_AGENT,
+        )
+        try:
+            driver.set_page_load_timeout(timeout)
+            driver.get(url)
+            try:
+                html = WebDriverWait(driver, timeout).until(
+                    lambda browser: browser.page_source
+                    if '__NEXT_DATA__' in browser.page_source else False)
+            except TimeoutException as exc:
+                raise ValueError(
+                    f'lolchess.gg 브라우저 응답에서 데이터를 찾지 못했습니다: '
+                    f'{driver.title} ({driver.current_url})'
+                ) from exc
+            return html
+        finally:
+            driver.quit()
 
 
 def _query_data(queries, key):
@@ -76,7 +131,7 @@ def parse_lolchess_meta(html, season=18):
             'id': guide_id,
             'title': guide['name'].strip(),
             'season': season,
-            'source_url': f'https://lolchess.gg/builder/guide/{guide_id}?type=guide',
+            'source_url': f'https://lolchess.gg/builder/guide/{guide_id}?type=guide&hl=ko',
             'champions': slots,
         })
     if not records:
@@ -86,11 +141,10 @@ def parse_lolchess_meta(html, season=18):
     return records
 
 
-def collect_lolchess_meta(season=18, *, timeout=30):
-    response = requests.get('https://lolchess.gg/meta', timeout=timeout,
-                            headers={'User-Agent': 'Mozilla/5.0'})
-    response.raise_for_status()
-    return parse_lolchess_meta(response.text, season=season)
+def collect_lolchess_meta(season=18, *, timeout=30, driver_factory=None):
+    html = fetch_lolchess_html(
+        META_URL, timeout=timeout, driver_factory=driver_factory)
+    return parse_lolchess_meta(html, season=season)
 
 
 def lolchess_crawling():
