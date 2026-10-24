@@ -12,6 +12,7 @@ from Crawling.crawl.browser import create_driver
 
 
 META_URL = 'https://lolchess.gg/meta?hl=ko'
+API_BASE_URL = 'https://tft.dakgg.io/api/v1'
 BROWSER_USER_AGENT = (
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
     '(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
@@ -22,6 +23,13 @@ REQUEST_HEADERS = {
               'image/avif,image/webp,*/*;q=0.8',
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     'Referer': 'https://lolchess.gg/',
+}
+API_HEADERS = {
+    'User-Agent': BROWSER_USER_AGENT,
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': REQUEST_HEADERS['Accept-Language'],
+    'Origin': 'https://lolchess.gg',
+    'Referer': META_URL,
 }
 
 
@@ -86,15 +94,16 @@ def _query_data(queries, key):
     raise ValueError(f'lolchess.gg 응답에 {key} 데이터가 없습니다.')
 
 
-def parse_lolchess_meta(html, season=18):
-    parser = _NextDataParser()
-    parser.feed(html)
-    if not parser.data:
-        raise ValueError('lolchess.gg 응답에서 __NEXT_DATA__를 찾지 못했습니다.')
-    queries = json.loads(''.join(parser.data))['props']['pageProps']['dehydratedState']['queries']
-    champion_refs = _query_data(queries, 'championRefs')
-    item_refs = _query_data(queries, 'itemRefs')
-    guide_data = _query_data(queries, 'getGuideDecks')
+def fetch_lolchess_json(path, *, params=None, timeout=30):
+    response = requests.get(
+        f'{API_BASE_URL}/{path.lstrip("/")}', params=params,
+        timeout=timeout, headers=API_HEADERS,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def build_lolchess_records(champion_refs, item_refs, guide_data, season=18):
     expected_season = f'set{season}'
     if champion_refs['season'] != expected_season or item_refs['season'] != expected_season:
         raise ValueError(f'lolchess.gg 데이터가 {expected_season}이 아닙니다.')
@@ -141,10 +150,32 @@ def parse_lolchess_meta(html, season=18):
     return records
 
 
+def parse_lolchess_meta(html, season=18):
+    parser = _NextDataParser()
+    parser.feed(html)
+    if not parser.data:
+        raise ValueError('lolchess.gg 응답에서 __NEXT_DATA__를 찾지 못했습니다.')
+    queries = json.loads(''.join(parser.data))['props']['pageProps']['dehydratedState']['queries']
+    champion_refs = _query_data(queries, 'championRefs')
+    item_refs = _query_data(queries, 'itemRefs')
+    guide_data = _query_data(queries, 'getGuideDecks')
+    return build_lolchess_records(
+        champion_refs, item_refs, guide_data, season=season)
+
+
 def collect_lolchess_meta(season=18, *, timeout=30, driver_factory=None):
-    html = fetch_lolchess_html(
-        META_URL, timeout=timeout, driver_factory=driver_factory)
-    return parse_lolchess_meta(html, season=season)
+    season_key = f'set{season}'
+    champion_refs = fetch_lolchess_json(
+        'data/champions', params={'hl': 'ko', 'season': season_key},
+        timeout=timeout)
+    item_refs = fetch_lolchess_json(
+        'data/items', params={'hl': 'ko', 'season': season_key},
+        timeout=timeout)
+    guide_data = fetch_lolchess_json(
+        'guide-decks', params={'q': 'live', 'hl': 'ko', 'newSet': 1},
+        timeout=timeout)
+    return build_lolchess_records(
+        champion_refs, item_refs, guide_data, season=season)
 
 
 def lolchess_crawling():

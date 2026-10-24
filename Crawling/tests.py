@@ -1,7 +1,7 @@
 """DB-free regression tests: python -m unittest Crawling.tests -v."""
 import unittest
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 from selenium.common.exceptions import TimeoutException
 
 from Crawling.crawl import synergy_crawling as crawler
@@ -420,6 +420,34 @@ class ChampionTests(unittest.TestCase):
 
 
 class LolchessMetaTests(unittest.TestCase):
+    @patch.object(lolchess_crawler, 'fetch_lolchess_json')
+    def test_collector_uses_public_data_api_instead_of_meta_page(self, fetch_json):
+        champion_refs = {'season': 'set18', 'champions': [
+            {'key': 'Hero', 'name': '영웅', 'cost': [1],
+             'imageUrl': 'https://cdn.lolchess.gg/hero.jpg'},
+        ]}
+        item_refs = {'season': 'set18', 'items': [
+            {'key': 'Sword', 'name': '검'}]}
+        guide_data = {'guideDecks': [{
+            'teamBuilderKey': 'guide1', 'name': '시험 덱', 'season': 'set18',
+            'data': {'set': 'set18', 'slots': [
+                {'index': index, 'champion': 'Hero', 'items': ['Sword']}
+                for index in range(5)]},
+        }]}
+        fetch_json.side_effect = [champion_refs, item_refs, guide_data]
+
+        records = lolchess_crawler.collect_lolchess_meta()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(fetch_json.call_args_list, [
+            call('data/champions', params={'hl': 'ko', 'season': 'set18'},
+                 timeout=30),
+            call('data/items', params={'hl': 'ko', 'season': 'set18'},
+                 timeout=30),
+            call('guide-decks',
+                 params={'q': 'live', 'hl': 'ko', 'newSet': 1}, timeout=30),
+        ])
+
     @patch.object(lolchess_crawler.requests, 'get')
     def test_current_korean_meta_url_uses_direct_response(self, get):
         response = MagicMock(status_code=200, text='<html>ok</html>')
