@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
-from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, LolMetaChampionSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
+from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
 from django.utils import timezone
 from django.db.models import F, Q
 
@@ -12,10 +12,12 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from User.permission import IsAuthenticatedAndTokenVerified
-from .schema import lol_meta_schema, champion_response_schema
+from .schema import lol_meta_schema, champion_response_schema, level_parameter
 from .utils import find_db
+from .meta_response import meta_response_data
+from rest_framework.exceptions import ValidationError
 
-import re
+
 
 # 챔피언 조회
 class ChampionSearchView(APIView):
@@ -83,11 +85,8 @@ class UseChampionSearchView(APIView):
     )
 
     def get(self, request):
-        lol_meta_champions = LolMetaChampion.objects.all()
-        champions = []
-        for champ in lol_meta_champions:
-            if champ.champion.name not in champions:
-                champions.append(champ.champion.name)
+        champions = list(dict.fromkeys(
+            LolMetaChampion.objects.values_list('champion__name', flat=True)))
 
         return Response({'resultcode': 'SUCCESS', 'data': champions}, status=status.HTTP_200_OK)
         
@@ -280,12 +279,27 @@ class MetaPagination(PageNumberPagination):
 
 # 메타 조회
 class MetaSearchView(APIView):
+    @staticmethod
+    def selected_level(value):
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        try:
+            level = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        if not 1 <= level <= 10:
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        return level
+
     @swagger_auto_schema(
         operation_description='전체 메타 조회',
         operation_summary='전체 메타 조회',
         operation_id='메타_전체메타',
         tags=['메타'],
         manual_parameters=[
+            level_parameter,
             openapi.Parameter(
                 'type',
                 openapi.IN_QUERY,
@@ -317,6 +331,7 @@ class MetaSearchView(APIView):
     )
 
     def get(self, request):
+        level = self.selected_level(request.query_params.get('level'))
         type = request.query_params.get('type')
 
         if type == 'best':
@@ -327,50 +342,12 @@ class MetaSearchView(APIView):
                     [:3] 
                     )
         else:
-            metas = LolMeta.objects.all().order_by('-like_count').distinct()
+            metas = LolMeta.objects.all().order_by('-like_count')
 
         paginator = MetaPagination()
         paginated_metas = paginator.paginate_queryset(metas, request)
     
-        data = []
-
-        for meta in paginated_metas:
-            meta_data = {
-                'meta': LolMetaSerializer(meta).data,
-                'synergys': []
-            }
-            meta_synergy = {}
-
-            meta_champions = LolMetaChampion.objects.filter(meta=meta)
-
-            for meta_champion in meta_champions:
-                if meta.id == meta_champion.meta.id:
-                    synergys = meta_champion.champion.synergy.all()
-                    items = meta_champion.item.all()
-
-                    for synergy in synergys:
-                        if synergy.name not in meta_synergy:
-                            meta_synergy[synergy.name] = {'number': 0, 'effect': synergy.effect, 'img_src': synergy.synergyimg.img_src, 'sequence': synergy.sequence}
-                        meta_synergy[synergy.name]['number'] += 1
-
-                    if len(items) > 0 :
-                        for item in items:
-                            if '상징' in item.name :
-                                synergy = ''.join(re.findall(r'[^ 상징]',item.name))
-
-                                if synergy not in meta_synergy:
-                                    meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                                meta_synergy[synergy]['number'] += 1
-
-
-            meta_data['synergys'].append(
-                                        dict(sorted(meta_synergy.items(), key=lambda x: (
-                                            'unique' in x[1]['sequence'],  
-                                            x[1]['number']
-                                        ), reverse=True))
-                                    )
-            data.append(meta_data)
-
+        data = meta_response_data(paginated_metas, level)
         return paginator.get_paginated_response(data)
     
     @swagger_auto_schema(
@@ -382,6 +359,9 @@ class MetaSearchView(APIView):
         type=openapi.TYPE_OBJECT,
         properties={
             'data': openapi.Schema(type=openapi.TYPE_STRING, description="조회할 메타 데이터, ','로 구분하여 입력. 예: '직스, 누누'"),
+            'level': openapi.Schema(
+                type=openapi.TYPE_INTEGER, minimum=1, maximum=10,
+                description='선택할 배치 레벨. 생략하거나 자료가 없으면 각 메타의 대표 배치를 반환합니다.'),
         },
         required=['data'],  
     ),
@@ -403,47 +383,17 @@ class MetaSearchView(APIView):
     )
     
     def post(self, request):
-        search_data = request.data['data'].split(',')
+        level = self.selected_level(request.data.get('level'))
+        value = request.data.get('data')
+        if not isinstance(value, str) or not value.strip():
+            raise ValidationError({'data': '검색할 ID 또는 키워드를 입력하세요.'})
+        search_data = [keyword.strip() for keyword in value.split(',') if keyword.strip()]
+        if not search_data:
+            raise ValidationError({'data': '검색할 ID 또는 키워드를 입력하세요.'})
         
         total_data = find_db(search_data)
             
-        data = []
-
-        for meta in total_data:
-            meta_champion = LolMetaChampionSerializer(LolMetaChampion.objects.filter(meta__title=meta.title), many=True).data
-            meta_data = {
-                'meta': LolMetaSerializer(meta).data,
-                'synergys': [],
-            }
-            meta_synergy = {}
-
-            for champion in meta_champion:
-                champ_synergy = champion['champion'].get('synergy')
-                
-                if champ_synergy:
-                    for synergy in champ_synergy:
-                        if synergy not in meta_synergy:
-                            meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                        meta_synergy[synergy]['number'] += 1
-
-                if 'item' in champion:
-                    champ_item = champion['item']
-
-                    for item in champ_item:
-                        if '상징' in item['name'] :
-                            synergy = ''.join(re.findall(r'[^ 상징]',item['name']))
-                            
-                            if synergy not in meta_synergy:
-                                meta_synergy[synergy] = {'number': 0, 'effect': Synergy.objects.get(name=synergy).effect, 'img_src': Synergy.objects.get(name=synergy).synergyimg.img_src, 'sequence': Synergy.objects.get(name=synergy).sequence}
-                            meta_synergy[synergy]['number'] += 1
-
-            meta_data['synergys'].append(
-                                        dict(sorted(meta_synergy.items(), key=lambda x: (
-                                            'unique' in x[1]['sequence'],  
-                                            x[1]['number']
-                                        ), reverse=True))
-                                    )
-            data.append(meta_data)
+        data = meta_response_data(total_data, level)
 
         if data == []:
             return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
@@ -704,7 +654,6 @@ class DeleteReactionView(APIView):
             return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다'}, status=status.HTTP_404_NOT_FOUND)
             
         return Response({'resultcode': 'FAIL', 'message': '잘못된 접근입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # 댓글 조회
 class CheckCommentView(APIView):
@@ -1017,4 +966,3 @@ class DeleteCommentView(APIView):
             return Response({'resultcode': 'SUCCESS', 'message': '댓글 삭제가 완료되었습니다.'},status=status.HTTP_200_OK)
         
         return Response({'resultcode': 'FAIL', 'message': '잘못된 접근입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-    
