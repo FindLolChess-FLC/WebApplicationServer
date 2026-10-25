@@ -52,6 +52,9 @@ meta_result_schema = openapi.Schema(type=openapi.TYPE_OBJECT, properties={
     'synergys': synergies_schema,
     'detail_info': openapi.Schema(type=openapi.TYPE_STRING, description='줄바꿈이 포함된 덱 설명'),
     'selected_level': openapi.Schema(type=openapi.TYPE_INTEGER, description='실제로 반환한 레벨'),
+    'available_levels': openapi.Schema(
+        type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_INTEGER),
+        description='배치가 저장된 레벨과 대표 레벨의 중복 없는 오름차순 목록'),
 })
 lol_meta_schema = openapi.Schema(type=openapi.TYPE_OBJECT, properties={
     'count': openapi.Schema(type=openapi.TYPE_INTEGER),
