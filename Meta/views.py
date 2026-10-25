@@ -4,61 +4,20 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
 from .models import Champion, Synergy, Item, LolMeta, LolMetaChampion, Augmenter, MetaReaction, Comment
-from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, LolMetaSerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer, meta_details_prefetch
+from .serializers import ChampionSerializer, ItemSerializer, SynergySerializer, AugmenterSerializer, ReactionSerializer, CommentSerializer
 from django.utils import timezone
-from django.db.models import F, Q, prefetch_related_objects
+from django.db.models import F, Q
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
 from User.permission import IsAuthenticatedAndTokenVerified
-from .schema import lol_meta_schema, champion_response_schema
+from .schema import lol_meta_schema, champion_response_schema, level_parameter
 from .utils import find_db
+from .meta_response import meta_response_data
+from rest_framework.exceptions import ValidationError
 
-import re
 
-
-def _meta_response_data(metas):
-    """Build the existing meta response from a bounded set of DB queries."""
-    if not metas:
-        return []
-    prefetch_related_objects(metas, meta_details_prefetch())
-    synergies_by_name = {synergy.name: synergy for synergy in
-                         Synergy.objects.select_related('synergyimg')}
-    data = []
-    for meta in metas:
-        meta_synergy = {}
-        for placed in meta.lolmetachampion_set.all():
-            for synergy in placed.champion.synergy.all():
-                if synergy.name not in meta_synergy:
-                    meta_synergy[synergy.name] = {
-                        'number': 0, 'effect': synergy.effect,
-                        'img_src': synergy.synergyimg.img_src,
-                        'sequence': synergy.sequence,
-                    }
-                meta_synergy[synergy.name]['number'] += 1
-
-            for item in placed.item.all():
-                if '상징' not in item.name:
-                    continue
-                name = ''.join(re.findall(r'[^ 상징]', item.name))
-                if name not in meta_synergy:
-                    synergy = synergies_by_name[name]
-                    meta_synergy[name] = {
-                        'number': 0, 'effect': synergy.effect,
-                        'img_src': synergy.synergyimg.img_src,
-                        'sequence': synergy.sequence,
-                    }
-                meta_synergy[name]['number'] += 1
-
-        sorted_synergies = dict(sorted(
-            meta_synergy.items(),
-            key=lambda entry: ('unique' in entry[1]['sequence'], entry[1]['number']),
-            reverse=True,
-        ))
-        data.append({'meta': LolMetaSerializer(meta).data,
-                     'synergys': [sorted_synergies]})
-    return data
 
 # 챔피언 조회
 class ChampionSearchView(APIView):
@@ -320,12 +279,27 @@ class MetaPagination(PageNumberPagination):
 
 # 메타 조회
 class MetaSearchView(APIView):
+    @staticmethod
+    def selected_level(value):
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        try:
+            level = int(value)
+        except (TypeError, ValueError):
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        if not 1 <= level <= 10:
+            raise ValidationError({'level': 'level은 1~10 사이의 정수여야 합니다.'})
+        return level
+
     @swagger_auto_schema(
         operation_description='전체 메타 조회',
         operation_summary='전체 메타 조회',
         operation_id='메타_전체메타',
         tags=['메타'],
         manual_parameters=[
+            level_parameter,
             openapi.Parameter(
                 'type',
                 openapi.IN_QUERY,
@@ -357,6 +331,7 @@ class MetaSearchView(APIView):
     )
 
     def get(self, request):
+        level = self.selected_level(request.query_params.get('level'))
         type = request.query_params.get('type')
 
         if type == 'best':
@@ -372,7 +347,7 @@ class MetaSearchView(APIView):
         paginator = MetaPagination()
         paginated_metas = paginator.paginate_queryset(metas, request)
     
-        data = _meta_response_data(paginated_metas)
+        data = meta_response_data(paginated_metas, level)
         return paginator.get_paginated_response(data)
     
     @swagger_auto_schema(
@@ -384,6 +359,9 @@ class MetaSearchView(APIView):
         type=openapi.TYPE_OBJECT,
         properties={
             'data': openapi.Schema(type=openapi.TYPE_STRING, description="조회할 메타 데이터, ','로 구분하여 입력. 예: '직스, 누누'"),
+            'level': openapi.Schema(
+                type=openapi.TYPE_INTEGER, minimum=1, maximum=10,
+                description='선택할 배치 레벨. 생략하거나 자료가 없으면 각 메타의 대표 배치를 반환합니다.'),
         },
         required=['data'],  
     ),
@@ -405,11 +383,17 @@ class MetaSearchView(APIView):
     )
     
     def post(self, request):
-        search_data = request.data['data'].split(',')
+        level = self.selected_level(request.data.get('level'))
+        value = request.data.get('data')
+        if not isinstance(value, str) or not value.strip():
+            raise ValidationError({'data': '검색할 ID 또는 키워드를 입력하세요.'})
+        search_data = [keyword.strip() for keyword in value.split(',') if keyword.strip()]
+        if not search_data:
+            raise ValidationError({'data': '검색할 ID 또는 키워드를 입력하세요.'})
         
         total_data = find_db(search_data)
             
-        data = _meta_response_data(total_data)
+        data = meta_response_data(total_data, level)
 
         if data == []:
             return Response({'resultcode': 'FAIL', 'message': '해당하는 메타가 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
@@ -731,7 +715,7 @@ class CheckCommentView(APIView):
         if user_id:
             filter_conditions['writer'] = user_id
 
-        comments = Comment.objects.filter(**filter_conditions).order_by('id')
+        comments = Comment.objects.filter(**filter_conditions).select_related('writer', 'lol_meta').order_by('id')
 
         if comments.exists():
             serializer = CommentSerializer(comments, many=True)

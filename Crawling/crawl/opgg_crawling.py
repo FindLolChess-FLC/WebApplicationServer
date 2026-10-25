@@ -1,5 +1,6 @@
 """Collect OP.GG TFT comps with a headless browser, including board positions."""
 import tempfile
+import re
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -19,7 +20,10 @@ FIREFOX_USER_AGENT = (
 BOARD_SCRIPT = r"""
 const card = arguments[0];
 const board = card.querySelector('div.flex.h-\\[192px\\]');
-const grid = board?.querySelector(':scope > div > div');
+const grid = arguments[1]
+    ? Array.from(card.querySelectorAll('div')).filter(element =>
+        Array.from(element.children).filter(row => row.children.length === 7).length === 4).at(-1)
+    : board?.querySelector(':scope > div > div');
 if (!grid) return null;
 const rows = Array.from(grid.children).filter(row => row.children.length === 7);
 if (rows.length !== 4) return null;
@@ -56,11 +60,11 @@ return {
 """
 
 
-def validate_record(record):
+def validate_record(record, *, min_units=5):
     if not record or not record.get('title') or len(record['title']) > 50:
         raise ValueError(f'OP.GG 덱 제목이 비어 있거나 너무 깁니다: {record}')
     slots = record.get('champions') or []
-    if not 5 <= len(slots) <= 28:
+    if not min_units <= len(slots) <= 28:
         raise ValueError(f'{record["title"]}: 챔피언 배치 {len(slots)}개')
     locations = set()
     for slot in slots:
@@ -75,6 +79,30 @@ def validate_record(record):
         elif slot['location'] != 0 or slot['star'] != 0:
             raise ValueError(f'{record["title"]}: 부분 수집에 실제 위치·별 값이 섞였습니다.')
     return record
+
+
+def collect_level_guides(driver, card, timeout):
+    tabs = card.find_elements(By.XPATH, './/*[text()="초중반 배치표"]')
+    if not tabs:
+        return []
+    driver.execute_script('arguments[0].scrollIntoView({block:"center"})', tabs[0])
+    tabs[0].click()
+    buttons = WebDriverWait(driver, timeout).until(lambda _: card.find_elements(
+        By.XPATH, './/button[starts-with(normalize-space(.), "레벨 ")]'))
+    levels = [int(match[1]) for button in buttons
+              if (match := re.fullmatch(r'레벨\s+(\d+)', button.text.strip()))]
+    guides = []
+    for level in levels:
+        button = card.find_element(By.XPATH, f'.//button[normalize-space(.)="레벨 {level}"]')
+        driver.execute_script('arguments[0].scrollIntoView({block:"center"})', button)
+        button.click()
+        WebDriverWait(driver, timeout).until(lambda _: f'{level}레벨 빌드' in card.text)
+        record = WebDriverWait(driver, timeout).until(
+            lambda _: driver.execute_script(BOARD_SCRIPT, card, True))
+        record['complete'] = True
+        validate_record(record, min_units=1)
+        guides.append({'level': level, 'content': '', 'champions': record['champions']})
+    return guides
 
 
 def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
@@ -122,22 +150,13 @@ def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
                     record['complete'] = True
                 except TimeoutException:
                     record = driver.execute_script(SUMMARY_SCRIPT, card)
+                links = card.find_elements(By.CSS_SELECTOR, 'a[href*="/meta-trends/comps/"]')
+                if links:
+                    record['source_url'] = links[0].get_attribute('href')
+                    record['id'] = record['source_url'].split('/comps/', 1)[1].split('?', 1)[0]
+                if record.get('complete'):
+                    record['guides'] = collect_level_guides(driver, card, timeout)
                 records.append(validate_record(record))
             return records
         finally:
             driver.quit()
-
-
-def opgg_crawling():
-    """Legacy shape used by the older three-site management command."""
-    result = {}
-    for record in collect_opgg_meta():
-        if not record['complete']:
-            continue
-        result[record['title']] = {
-            '챔프': [slot['name'] for slot in record['champions']],
-            '별': {slot['name']: slot['star'] for slot in record['champions']},
-            '위치': {slot['name']: slot['location'] for slot in record['champions']},
-            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
-        }
-    return result

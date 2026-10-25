@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service as FirefoxService
 
@@ -42,4 +43,8 @@ def create_driver(chrome_options, *, headless=True, driver_factory=None,
         driver.set_window_size(1440, 900)
         return driver
 
-    return webdriver.Chrome(options=chrome_options)
+    if os.environ.get('CHROME_BIN'):
+        chrome_options.binary_location = os.environ['CHROME_BIN']
+    driver_path = os.environ.get('CHROMEDRIVER_PATH')
+    service = ChromeService(executable_path=driver_path) if driver_path else ChromeService()
+    return webdriver.Chrome(options=chrome_options, service=service)

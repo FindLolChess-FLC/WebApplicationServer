@@ -1,36 +1,63 @@
-"""Collect LoLCHESS.GG recommended comps from the server-rendered meta page."""
+"""Collect LoLCHESS boards from the API used by its public frontend."""
 import json
-import tempfile
+import re
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
 
 import requests
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.support.ui import WebDriverWait
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-from Crawling.crawl.browser import create_driver
+from Crawling.crawl.guide_text import guide_text
 
 
-META_URL = 'https://lolchess.gg/meta?hl=ko'
 API_BASE_URL = 'https://tft.dakgg.io/api/v1'
-BROWSER_USER_AGENT = (
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-    '(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
-)
-REQUEST_HEADERS = {
-    'User-Agent': BROWSER_USER_AGENT,
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,'
-              'image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Referer': 'https://lolchess.gg/',
-}
 API_HEADERS = {
-    'User-Agent': BROWSER_USER_AGENT,
+    'User-Agent': 'Mozilla/5.0',
     'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': REQUEST_HEADERS['Accept-Language'],
+    'Accept-Language': 'ko-KR,ko;q=0.9',
     'Origin': 'https://lolchess.gg',
-    'Referer': META_URL,
+    'Referer': 'https://lolchess.gg/meta?hl=ko',
 }
+_sessions = threading.local()
+
+
+def fetch_lolchess_json(path, *, params=None, timeout=30):
+    if not hasattr(_sessions, 'client'):
+        client = requests.Session()
+        client.headers.update(API_HEADERS)
+        client.mount('https://', HTTPAdapter(max_retries=Retry(
+            total=3, backoff_factor=1,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=('GET',), respect_retry_after_header=True)))
+        _sessions.client = client
+    response = _sessions.client.get(f'{API_BASE_URL}/{path.lstrip("/")}',
+                                    params=params, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
+
+
+def build_slots(slots, champions, items):
+    result = []
+    for slot in slots:
+        champion = champions[slot['champion']]
+        result.append({
+            'name': champion['name'],
+            'star': slot.get('star', 1),
+            'location': slot['index'] + 1,
+            'items': [items[key] for key in slot.get('items', [])],
+            'is_summon': champion.get('isHidden', False)
+                         and champion.get('cost', [None])[0] == 0,
+            'image_url': champion['imageUrl'],
+        })
+    locations = [slot['location'] for slot in result]
+    if (len(locations) != len(set(locations))
+            or any(not 1 <= slot['location'] <= 28 or not 1 <= slot['star'] <= 3
+                   for slot in result)):
+        raise ValueError('lolchess.gg 배치 위치 또는 별 정보가 올바르지 않습니다.')
+    return result
 
 
 class _NextDataParser(HTMLParser):
@@ -52,55 +79,11 @@ class _NextDataParser(HTMLParser):
             self.data.append(data)
 
 
-def fetch_lolchess_html(url, *, timeout=30, driver_factory=None):
-    """Fetch normally, then use the deployment browser when the server gets 403."""
-    response = requests.get(url, timeout=timeout, headers=REQUEST_HEADERS)
-    if response.status_code != 403:
-        response.raise_for_status()
-        return response.text
-
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless=new')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--window-size=1440,900')
-    options.add_argument('--lang=ko-KR')
-    with tempfile.TemporaryDirectory(prefix='flc-lolchess-browser-') as profile:
-        options.add_argument(f'--user-data-dir={profile}')
-        driver = create_driver(
-            options, driver_factory=driver_factory,
-            firefox_user_agent=BROWSER_USER_AGENT,
-        )
-        try:
-            driver.set_page_load_timeout(timeout)
-            driver.get(url)
-            try:
-                html = WebDriverWait(driver, timeout).until(
-                    lambda browser: browser.page_source
-                    if '__NEXT_DATA__' in browser.page_source else False)
-            except TimeoutException as exc:
-                raise ValueError(
-                    f'lolchess.gg 브라우저 응답에서 데이터를 찾지 못했습니다: '
-                    f'{driver.title} ({driver.current_url})'
-                ) from exc
-            return html
-        finally:
-            driver.quit()
-
-
 def _query_data(queries, key):
     for query in queries:
         if query.get('queryKey', [None])[0] == key:
             return query['state']['data']
     raise ValueError(f'lolchess.gg 응답에 {key} 데이터가 없습니다.')
-
-
-def fetch_lolchess_json(path, *, params=None, timeout=30):
-    response = requests.get(
-        f'{API_BASE_URL}/{path.lstrip("/")}', params=params,
-        timeout=timeout, headers=API_HEADERS,
-    )
-    response.raise_for_status()
-    return response.json()
 
 
 def build_lolchess_records(champion_refs, item_refs, guide_data, season=18):
@@ -118,22 +101,7 @@ def build_lolchess_records(champion_refs, item_refs, guide_data, season=18):
         if guide_id in seen_ids:
             raise ValueError(f'중복 가이드 ID: {guide_id}')
         seen_ids.add(guide_id)
-        slots = []
-        for slot in guide['data']['slots']:
-            if slot['champion'] not in champions:
-                raise ValueError(f"알 수 없는 챔피언: {slot['champion']}")
-            unknown_items = set(slot.get('items', [])) - items.keys()
-            if unknown_items:
-                raise ValueError(f'알 수 없는 아이템: {sorted(unknown_items)}')
-            slots.append({
-                'name': champions[slot['champion']]['name'],
-                'star': slot.get('star', 1),
-                'location': slot['index'] + 1,
-                'items': [items[key] for key in slot.get('items', [])],
-                'is_summon': champions[slot['champion']].get('isHidden', False)
-                             and champions[slot['champion']].get('cost', [None])[0] == 0,
-                'image_url': champions[slot['champion']]['imageUrl'],
-            })
+        slots = build_slots(guide['data']['slots'], champions, items)
         if len(slots) < 5:
             continue
         records.append({
@@ -151,41 +119,91 @@ def build_lolchess_records(champion_refs, item_refs, guide_data, season=18):
 
 
 def parse_lolchess_meta(html, season=18):
+    """Read previously captured server-rendered pages with the same board parser."""
     parser = _NextDataParser()
     parser.feed(html)
     if not parser.data:
         raise ValueError('lolchess.gg 응답에서 __NEXT_DATA__를 찾지 못했습니다.')
     queries = json.loads(''.join(parser.data))['props']['pageProps']['dehydratedState']['queries']
-    champion_refs = _query_data(queries, 'championRefs')
-    item_refs = _query_data(queries, 'itemRefs')
-    guide_data = _query_data(queries, 'getGuideDecks')
-    return build_lolchess_records(
-        champion_refs, item_refs, guide_data, season=season)
+    return build_lolchess_records(_query_data(queries, 'championRefs'),
+                                 _query_data(queries, 'itemRefs'),
+                                 _query_data(queries, 'getGuideDecks'), season)
 
 
-def collect_lolchess_meta(season=18, *, timeout=30, driver_factory=None):
-    season_key = f'set{season}'
-    champion_refs = fetch_lolchess_json(
-        'data/champions', params={'hl': 'ko', 'season': season_key},
-        timeout=timeout)
-    item_refs = fetch_lolchess_json(
-        'data/items', params={'hl': 'ko', 'season': season_key},
-        timeout=timeout)
-    guide_data = fetch_lolchess_json(
-        'guide-decks', params={'q': 'live', 'hl': 'ko', 'newSet': 1},
-        timeout=timeout)
-    return build_lolchess_records(
-        champion_refs, item_refs, guide_data, season=season)
+def collect_lolchess_meta(season=18, *, timeout=30, include_details=False, workers=5):
+    params = {'hl': 'ko', 'season': f'set{season}'}
+    champion_refs = fetch_lolchess_json('data/champions', params=params, timeout=timeout)
+    item_refs = fetch_lolchess_json('data/items', params=params, timeout=timeout)
+    guides = fetch_lolchess_json('guide-decks',
+                                params={'q': 'live', 'hl': 'ko', 'newSet': 1},
+                                timeout=timeout)
+    records = build_lolchess_records(champion_refs, item_refs, guides, season)
+    if include_details:
+        attach_guides(records, champion_refs, item_refs, timeout=timeout, workers=workers)
+    return records
 
 
-def lolchess_crawling():
-    """Legacy shape used by the existing multi-source meta command."""
-    return {
-        record['title']: {
-            '챔프': [slot['name'] for slot in record['champions']],
-            '별': {slot['name']: slot['star'] for slot in record['champions']},
-            '위치': {slot['name']: slot['location'] for slot in record['champions']},
-            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
-        }
-        for record in collect_lolchess_meta()
-    }
+def _board_key(slots):
+    return sorted((slot['name'], slot['star'], slot['location'], tuple(sorted(slot['items'])))
+                  for slot in slots)
+
+
+def attach_guides(records, champion_refs, item_refs, *, timeout=30, workers=5):
+    """Fetch each shared level board once, before callers change the database."""
+    champions = {entry['key']: entry for entry in champion_refs['champions']}
+    items = {entry['key']: entry['name'] for entry in item_refs['items']}
+    lock = threading.Lock()
+    last_request = 0.0
+
+    def fetch(key):
+        nonlocal last_request
+        with lock:
+            time.sleep(max(0, 0.5 - (time.monotonic() - last_request)))
+            last_request = time.monotonic()
+        return fetch_lolchess_json(f'team-builders/{key}',
+                                  params={'hl': 'ko'}, timeout=timeout)['teamBuilder']
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        keys = list(dict.fromkeys(record['id'] for record in records))
+        builders = dict(zip(keys, pool.map(fetch, keys)))
+        level_keys = list(dict.fromkeys(
+            key for builder in builders.values()
+            for field, key in (builder.get('guide') or {}).items()
+            if re.fullmatch(r'builder_lv(?:[1-9]|10)_uuid', field) and key
+            and key not in builders))
+        builders.update(zip(level_keys, pool.map(fetch, level_keys)))
+
+    for record in records:
+        builder = builders[record['id']]
+        if (builder.get('name', '').strip() != record['title']
+                or builder.get('season') != f'set{record["season"]}'):
+            raise ValueError(f'{record["title"]}: 가이드 이름이나 시즌이 다릅니다.')
+        guide = builder.get('guide') or {}
+        contents = guide.get('contents') or []
+        main = [part for part in contents if part.get('title', '').strip() == record['title']]
+        if len(main) > 1:
+            raise ValueError(f'{record["title"]}: 덱 설명 항목이 중복됩니다.')
+        details = [{'level': 0, 'content': guide_text(main[0].get('content') or '')
+                    if main else '', 'champions': []}]
+        for field, key in guide.items():
+            match = re.fullmatch(r'builder_lv([1-9]|10)_uuid', field)
+            if not match or not key:
+                continue
+            level = int(match[1])
+            board = builders[key]
+            if board.get('season') != f'set{record["season"]}':
+                raise ValueError(f'{record["title"]}: {level}레벨 배치 시즌이 다릅니다.')
+            slots = build_slots(board.get('slots') or [], champions, items)
+            if not slots:
+                continue
+            texts = [guide_text(part.get('content') or '') for part in contents
+                     if re.fullmatch(rf'(?:lv\.?\s*{level}|{level}\s*레벨)',
+                                     part.get('title', '').strip(), re.IGNORECASE)]
+            details.append({'level': level, 'content': '\n\n'.join(filter(None, texts)),
+                            'champions': slots})
+        record['guides'] = details
+        representative = _board_key(record['champions'])
+        matched = [guide['level'] for guide in details
+                   if guide['level'] and _board_key(guide['champions']) == representative]
+        if matched:
+            record['default_level'] = min(matched)

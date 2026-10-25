@@ -82,6 +82,8 @@ class LolMeta(models.Model):
     like_count = models.IntegerField(default=0) 
     dislike_count = models.IntegerField(default=0) 
     reroll_lv = models.IntegerField(default=0)
+    default_level = models.PositiveSmallIntegerField(
+        default=8, validators=[MinValueValidator(1), MaxValueValidator(10)])
 
     def __str__(self):
         return self.title
@@ -109,3 +111,22 @@ class Comment(models.Model):
     lol_meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE) 
     content = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
+
+
+class MetaGuide(models.Model):
+    """Source-authored description and optional board; level 0 is the main guide."""
+
+    meta = models.ForeignKey(LolMeta, on_delete=models.CASCADE, related_name='guides')
+    source = models.CharField(max_length=20)
+    source_id = models.CharField(max_length=100, blank=True)
+    source_url = models.URLField(max_length=500, blank=True)
+    level = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(10)])
+    content = models.TextField(blank=True)
+    champions = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ('level', 'source')
+        constraints = [
+            models.UniqueConstraint(fields=('meta', 'source', 'level'),
+                                    name='unique_meta_guide_level'),
+        ]

@@ -124,7 +124,7 @@ class LolMetaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LolMeta
-        fields = ['id', 'title', 'like_count', 'dislike_count', 'reroll_lv', 'champions']
+        fields = ['id', 'title', 'like_count', 'dislike_count', 'reroll_lv', 'default_level', 'champions']
 
     def get_champions(self, instance):
         lol_meta_champions = getattr(instance, '_prefetched_objects_cache', {}).get(

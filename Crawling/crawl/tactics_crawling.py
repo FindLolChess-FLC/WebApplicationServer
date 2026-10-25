@@ -84,16 +84,3 @@ def collect_tactics_meta(*, timeout=30, driver_factory=None):
             return validate_tactics_records(driver.execute_script(CARD_SCRIPT))
         finally:
             driver.quit()
-
-
-def tactics_crawling():
-    """Existing meta-data shape; zero means location/star was not provided."""
-    return {
-        record['title']: {
-            '챔프': [slot['name'] for slot in record['champions']],
-            '별': {slot['name']: slot['star'] for slot in record['champions']},
-            '위치': {slot['name']: slot['location'] for slot in record['champions']},
-            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
-        }
-        for record in collect_tactics_meta()
-    }
