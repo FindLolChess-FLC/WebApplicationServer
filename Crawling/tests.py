@@ -8,6 +8,7 @@ from Crawling.crawl import item_crawling as item_crawler
 from Crawling.crawl import augmenter_crawling as augment_crawler
 from Crawling.crawl import champ_crawling as champion_crawler
 from Crawling.img_crawl import save_item as item_images
+from Crawling.img_crawl.recolor_synergy import black_svg
 from Crawling.crawl.lolchess_crawling import parse_lolchess_meta
 from Crawling.utils import jacaard_similarity, remove_duplicates_data, similar_meta_champions
 
@@ -18,6 +19,17 @@ def card(name='개화', **changes):
 
 
 class SynergyTests(unittest.TestCase):
+    def test_recolor_synergy_svg_preserves_transparency(self):
+        original = (b'<svg xmlns="http://www.w3.org/2000/svg" fill="none">'
+                    b'<path fill="white" d="M0 0h2v2z"/></svg>')
+        result, changed = black_svg(original)
+        self.assertTrue(changed)
+        self.assertIn(b'fill="black"', result)
+        self.assertIn(b'<svg xmlns="http://www.w3.org/2000/svg" fill="none">', result)
+        self.assertEqual(black_svg(result), (result, False))
+        with self.assertRaises(ValueError):
+            black_svg(original.replace(b'fill="white"', b'fill="red"'))
+
     def test_order_by_count_preserves_repeated_tier(self):
         rows = [{'label': '11 개화', 'tier': 'chromatic'},
                 {'label': '7 개화', 'tier': 'gold'},

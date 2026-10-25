@@ -1,21 +1,29 @@
-"""Collect OP.GG TFT comps with headless Chrome, including board positions."""
-import os
+"""Collect OP.GG TFT comps with a headless browser, including board positions."""
 import tempfile
+import re
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
+
+from Crawling.crawl.browser import create_driver
 
 
 URL = 'https://op.gg/ko/tft/meta-trends/comps'
 CARD_SELECTOR = 'ul.flex.flex-col.gap-1 > li'
+FIREFOX_USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+)
 
 BOARD_SCRIPT = r"""
 const card = arguments[0];
 const board = card.querySelector('div.flex.h-\\[192px\\]');
-const grid = board?.querySelector(':scope > div > div');
+const grid = arguments[1]
+    ? Array.from(card.querySelectorAll('div')).filter(element =>
+        Array.from(element.children).filter(row => row.children.length === 7).length === 4).at(-1)
+    : board?.querySelector(':scope > div > div');
 if (!grid) return null;
 const rows = Array.from(grid.children).filter(row => row.children.length === 7);
 if (rows.length !== 4) return null;
@@ -52,11 +60,11 @@ return {
 """
 
 
-def validate_record(record):
+def validate_record(record, *, min_units=5):
     if not record or not record.get('title') or len(record['title']) > 50:
         raise ValueError(f'OP.GG 덱 제목이 비어 있거나 너무 깁니다: {record}')
     slots = record.get('champions') or []
-    if not 5 <= len(slots) <= 28:
+    if not min_units <= len(slots) <= 28:
         raise ValueError(f'{record["title"]}: 챔피언 배치 {len(slots)}개')
     locations = set()
     for slot in slots:
@@ -73,33 +81,46 @@ def validate_record(record):
     return record
 
 
-def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
-    """Read the exact OP.GG comps URL using a fresh Chrome profile.
+def collect_level_guides(driver, card, timeout):
+    tabs = card.find_elements(By.XPATH, './/*[text()="초중반 배치표"]')
+    if not tabs:
+        return []
+    driver.execute_script('arguments[0].scrollIntoView({block:"center"})', tabs[0])
+    tabs[0].click()
+    buttons = WebDriverWait(driver, timeout).until(lambda _: card.find_elements(
+        By.XPATH, './/button[starts-with(normalize-space(.), "레벨 ")]'))
+    levels = [int(match[1]) for button in buttons
+              if (match := re.fullmatch(r'레벨\s+(\d+)', button.text.strip()))]
+    guides = []
+    for level in levels:
+        button = card.find_element(By.XPATH, f'.//button[normalize-space(.)="레벨 {level}"]')
+        driver.execute_script('arguments[0].scrollIntoView({block:"center"})', button)
+        button.click()
+        WebDriverWait(driver, timeout).until(lambda _: f'{level}레벨 빌드' in card.text)
+        record = WebDriverWait(driver, timeout).until(
+            lambda _: driver.execute_script(BOARD_SCRIPT, card, True))
+        record['complete'] = True
+        validate_record(record, min_units=1)
+        guides.append({'level': level, 'content': '', 'champions': record['champions']})
+    return guides
 
-    CloudFront currently rejects Chrome's ``HeadlessChrome`` user agent. CDP
-    changes that token before navigation, retaining the installed Chrome
-    version and platform on Linux deployments.
+
+def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
+    """Read the exact OP.GG comps URL in a headless browser.
+
+    Linux uses the deployment Firefox/GeckoDriver paths and original OP.GG
+    user-agent override. Local Chrome changes ``HeadlessChrome`` through CDP.
     """
     options = webdriver.ChromeOptions()
     if headless:
         options.add_argument('--headless=new')
-    if hasattr(os, 'geteuid') and os.geteuid() == 0:
-        options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1440,900')
     options.add_argument('--lang=ko-KR')
-    if os.environ.get('CHROME_BIN'):
-        options.binary_location = os.environ['CHROME_BIN']
     with tempfile.TemporaryDirectory(prefix='flc-opgg-chrome-') as profile:
         options.add_argument(f'--user-data-dir={profile}')
-        if driver_factory:
-            driver = driver_factory(options=options)
-        else:
-            service_path = os.environ.get('CHROMEDRIVER_PATH')
-            driver = webdriver.Chrome(
-                options=options,
-                service=Service(executable_path=service_path) if service_path else None,
-            )
+        driver = create_driver(options, headless=headless, driver_factory=driver_factory,
+                               firefox_user_agent=FIREFOX_USER_AGENT)
         try:
             driver.set_page_load_timeout(timeout)
             agent = driver.execute_script('return navigator.userAgent')
@@ -129,22 +150,13 @@ def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
                     record['complete'] = True
                 except TimeoutException:
                     record = driver.execute_script(SUMMARY_SCRIPT, card)
+                links = card.find_elements(By.CSS_SELECTOR, 'a[href*="/meta-trends/comps/"]')
+                if links:
+                    record['source_url'] = links[0].get_attribute('href')
+                    record['id'] = record['source_url'].split('/comps/', 1)[1].split('?', 1)[0]
+                if record.get('complete'):
+                    record['guides'] = collect_level_guides(driver, card, timeout)
                 records.append(validate_record(record))
             return records
         finally:
             driver.quit()
-
-
-def opgg_crawling():
-    """Legacy shape used by the older three-site management command."""
-    result = {}
-    for record in collect_opgg_meta():
-        if not record['complete']:
-            continue
-        result[record['title']] = {
-            '챔프': [slot['name'] for slot in record['champions']],
-            '별': {slot['name']: slot['star'] for slot in record['champions']},
-            '위치': {slot['name']: slot['location'] for slot in record['champions']},
-            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
-        }
-    return result

@@ -1,12 +1,12 @@
 """Collect current tactics.tools team-composition summaries with Selenium."""
-import os
 import tempfile
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+
+from Crawling.crawl.browser import create_driver
 
 
 URL = 'https://tactics.tools/ko/team-compositions'
@@ -17,6 +17,9 @@ return Array.from(document.querySelectorAll('.tc-summary-wrap')).map(card => {
         .filter(image => image.parentElement.className.includes('mx-[3px]'));
     return {
         title: card.querySelector('.text-lg.pl-1')?.textContent.trim(),
+        tips: Array.from(card.querySelectorAll(
+            'div.flex.flex-col.gap-2.text-sm.font-montserrat.font-medium > div > .truncate'
+        ), tag => tag.textContent.trim()).filter(Boolean),
         champions: images.map(image => ({
             name: image.alt,
             star: 0,
@@ -53,20 +56,9 @@ def collect_tactics_meta(*, timeout=30, driver_factory=None):
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1440,900')
     options.add_argument('--lang=ko-KR')
-    if hasattr(os, 'geteuid') and os.geteuid() == 0:
-        options.add_argument('--no-sandbox')
-    if os.environ.get('CHROME_BIN'):
-        options.binary_location = os.environ['CHROME_BIN']
     with tempfile.TemporaryDirectory(prefix='flc-tactics-chrome-') as profile:
         options.add_argument(f'--user-data-dir={profile}')
-        if driver_factory:
-            driver = driver_factory(options=options)
-        else:
-            service_path = os.environ.get('CHROMEDRIVER_PATH')
-            driver = webdriver.Chrome(
-                options=options,
-                service=Service(executable_path=service_path) if service_path else None,
-            )
+        driver = create_driver(options, driver_factory=driver_factory)
         try:
             driver.set_page_load_timeout(timeout)
             driver.get(URL)
@@ -92,16 +84,3 @@ def collect_tactics_meta(*, timeout=30, driver_factory=None):
             return validate_tactics_records(driver.execute_script(CARD_SCRIPT))
         finally:
             driver.quit()
-
-
-def tactics_crawling():
-    """Existing meta-data shape; zero means location/star was not provided."""
-    return {
-        record['title']: {
-            '챔프': [slot['name'] for slot in record['champions']],
-            '별': {slot['name']: slot['star'] for slot in record['champions']},
-            '위치': {slot['name']: slot['location'] for slot in record['champions']},
-            '아이템': {slot['name']: slot['items'] for slot in record['champions']},
-        }
-        for record in collect_tactics_meta()
-    }

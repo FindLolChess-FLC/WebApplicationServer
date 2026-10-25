@@ -48,8 +48,8 @@ def jacaard_similarity(data, data2):
     return len(set_data & set_data2) / len(union) if union else 0.0
 
 
-def similar_meta_champions(data, data2, prices, threshold=0.8):
-    """Match roster variants while keeping high-cost carry replacements distinct."""
+def similar_meta_champions(data, data2, prices, threshold=0.85):
+    """Match near-identical rosters while preserving meaningful unit changes."""
     left = {_champion_key(name) for name in data}
     right = {_champion_key(name) for name in data2}
     if not left or not right:
@@ -59,19 +59,11 @@ def similar_meta_champions(data, data2, prices, threshold=0.8):
 
     removed, added = left - right, right - left
     normalized_prices = {_champion_key(name): cost for name, cost in prices.items()}
-    # A replacement of a 4+ cost unit usually changes the deck's main carry.
-    if removed and added and any(normalized_prices.get(name, 3) >= 4
-                                 for name in removed | added):
+    # Adding or replacing a 4+ cost unit can change the deck's main carry.
+    if any(normalized_prices.get(name, 3) >= 4 for name in removed | added):
         return False
 
-    if jacaard_similarity(left, right) >= threshold:
-        return True
-    # Plain Jaccard scores a one-unit swap in an eight-unit board as 7/9.
-    # Treat one low-cost filler replacement as the same comp on 7+ unit boards.
-    return (min(len(left), len(right)) >= 7
-            and len(removed) == len(added) == 1
-            and all(normalized_prices.get(name, 3) <= 2 for name in removed | added)
-            and len(left & right) / min(len(left), len(right)) >= threshold)
+    return jacaard_similarity(left, right) >= threshold
 
 
 # cloudnary 이미지 url 가져오기
@@ -95,7 +87,7 @@ def get_img_src(folder_name):
 
     return image_urls
 
-def remove_duplicates_data(data1: dict, data2: dict, threshold=0.8, prices=None):
+def remove_duplicates_data(data1: dict, data2: dict, threshold=0.85, prices=None):
     """Preserve the first deck when its champion roster is equivalent.
 
     Inputs are not mutated. Each value must have a ``챔프`` list; callers may
