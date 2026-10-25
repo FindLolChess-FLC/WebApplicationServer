@@ -1,5 +1,5 @@
 """Batch-load meta search results and their requested level boards."""
-from collections import Counter
+from collections import Counter, defaultdict
 
 from django.db.models import Prefetch, prefetch_related_objects
 
@@ -42,6 +42,12 @@ def meta_response_data(metas, level=None):
     requested = MetaGuide.objects.filter(level__in=[0, level] if level else [0])
     prefetch_related_objects(metas, meta_details_prefetch(),
                              Prefetch('guides', queryset=requested, to_attr='selected_guides'))
+    available_levels = defaultdict(set)
+    level_boards = MetaGuide.objects.filter(
+        meta_id__in=[meta.pk for meta in metas], level__gt=0,
+    ).exclude(champions=[]).values_list('meta_id', 'level')
+    for meta_id, board_level in level_boards:
+        available_levels[meta_id].add(board_level)
     synergies = {synergy.name: synergy for synergy in
                  Synergy.objects.select_related('synergyimg')}
     slots = [slot for meta in metas for guide in meta.selected_guides
@@ -66,6 +72,7 @@ def meta_response_data(metas, level=None):
                                    for placed in placements], synergies),
             'detail_info': main_text,
             'selected_level': meta.default_level,
+            'available_levels': sorted(available_levels[meta.pk] | {meta.default_level}),
         }
         selected = next((guide for guide in guides
                          if guide.level == level and level != meta.default_level), None)
