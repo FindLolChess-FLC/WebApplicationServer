@@ -77,6 +77,9 @@ GET 목록 조회는 `/meta/metasearch/?level=5`처럼 쿼리스트링을 사용
 `detail_info`는 줄바꿈이 포함된 덱 설명입니다. `meta.default_level`은 대표 레벨,
 `selected_level`은 실제 반환한 레벨입니다. 선택한 배치의 챔피언·아이템·위치는
 `meta.champions`, 시너지는 `synergys`에 들어갑니다.
+`available_levels`는 배치가 저장된 레벨과 대표 레벨을 중복 없이 오름차순으로
+반환합니다. 프론트는 이 목록의 레벨만 선택 버튼으로 표시하면 됩니다.
+대표 배치만 있는 메타는 대표 레벨 하나만 반환하며, `level_data`는 반환하지 않습니다.
 `level`을 생략하거나 해당 레벨 자료가 없으면 대표 배치를 반환합니다.
 유효하지 않은 `level`(정수가 아니거나 1~10 범위 밖)은 HTTP 400을 반환합니다.
 
