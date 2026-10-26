@@ -3,7 +3,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from Crawling.crawl.authored_guides import content_for_board, match_guide, name_key, read_guides
+from Crawling.crawl.authored_guides import (
+    content_for_board, match_guide, name_key, normalize_content, read_guides)
 from Meta.models import Champion, LolMeta, MetaGuide
 
 
@@ -15,6 +16,8 @@ class Command(BaseCommand):
                             default=str(settings.BASE_DIR / 'Crawling/data/meta_guides.json'))
         parser.add_argument('--dry-run', action='store_true', help='DB에 저장하지 않고 확인')
         parser.add_argument('--strict', action='store_true', help='이전 방식대로 제목·대표 배치 완전 일치만 허용')
+        parser.add_argument('--update', action='store_true',
+                            help='직접 작성한 기존 설명도 갱신합니다. 다른 출처 설명은 보존합니다.')
 
     def handle(self, *args, **options):
         entries = read_guides(options['path'])
@@ -31,22 +34,31 @@ class Command(BaseCommand):
             authored = {guide.meta_id: guide for guide in guides
                         if guide.level == 0 and guide.source == 'ai'}
             for meta in metas:
-                if meta.pk in nonempty:
+                guide = authored.get(meta.pk)
+                if meta.pk in nonempty and not (options['update'] and guide is not None):
                     continue
                 entry, _ = match_guide(meta, entries, prices, strict=options['strict'])
                 if entry is None:
+                    if not (options['update'] and guide is not None):
+                        continue
+                    # A changed board must not prevent safe wording-only updates.
+                    content = normalize_content(guide.content)
+                else:
+                    content = entry['content'] if options['strict'] else content_for_board(entry, meta)
+                if guide is not None and guide.content == content:
                     continue
-                content = entry['content'] if options['strict'] else content_for_board(entry, meta)
                 if not options['dry_run']:
-                    guide = authored.get(meta.pk)
                     if guide is None:
                         MetaGuide.objects.create(meta=meta, source='ai', level=0,
                                                  source_id=f"authored:{entry['title']}",
                                                  content=content)
                     else:
                         guide.content = content
-                        guide.source_id = f"authored:{entry['title']}"
-                        guide.save(update_fields=['content', 'source_id'])
+                        fields = ['content']
+                        if entry is not None:
+                            guide.source_id = f"authored:{entry['title']}"
+                            fields.append('source_id')
+                        guide.save(update_fields=fields)
                 nonempty.add(meta.pk)
                 applied += 1
         action = '적용 예정' if options['dry_run'] else '적용'

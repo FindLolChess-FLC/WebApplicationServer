@@ -27,6 +27,15 @@ python manage.py import_meta_guides --dry-run
 python manage.py import_meta_guides
 ```
 
+이미 저장한 자체 작성 설명도 갱신하려면 다음 명령을 사용한다. 다른 출처의 설명은 수정하지 않는다. 대응하는 원본이 없으면 기존 문구의 아이템 라벨만 정리한다. 출력은 적용·건너뜀 합계 한 줄이다.
+
+```bash
+python manage.py import_meta_guides --update --dry-run
+python manage.py import_meta_guides --update
+```
+
+`저장된 아이템 예시:`·`저장된 아이템:`은 `아이템:`으로 정리한다. 새로 작성하는 아이템 예시에도 같은 라벨을 사용한다. 기본 실행은 기존 설명을 계속 보존한다.
+
 서버 체크아웃이 deploy 브랜치인지 먼저 확인한다. 다른 브랜치라면 작업 내용을 확인한 뒤 deploy로 전환한다. Git pull이 충돌·로컬 변경 때문에 실패하면 이후 명령을 진행하기 전에 해당 상태를 해결한다.
 
 출력은 `적용 N개 / 건너뜀 N개` 한 줄만 표시한다. `--dry-run`은 DB에 저장하지 않고 `적용 예정 N개 / 건너뜀 N개`만 표시한다. 기본적으로 DB의 빈 설명 전체에 대해 48개 원본 중 적합한 설명을 찾는다. 하나의 원본을 여러 호환 덱에 사용할 수 있으므로 적용 수는 원본 수와 다를 수 있다. 매칭 기준은 변경하지 않았다.

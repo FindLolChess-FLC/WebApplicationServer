@@ -138,12 +138,18 @@ def match_guide(meta, entries, prices, *, strict=False):
 def content_for_board(entry, meta):
     """Keep authored strategy but show item examples from the destination board."""
     examples = '\n\n'.join(
-        f"[{slot['name']}]\n· 저장된 아이템 예시: {' / '.join(slot['items'])}"
+        f"[{slot['name']}]\n· 아이템: {' / '.join(slot['items'])}"
         for slot in board_data(meta) if slot['items'])
     if not examples:
         examples = '· 현재 저장된 배치에는 장착 아이템 예시가 없습니다.'
-    return re.sub(r'(?ms)^챔피언 & 아이템\n\n.*?(?=^아이템 우선순위\n)',
-                  lambda _: f'챔피언 & 아이템\n\n{examples}\n\n', entry['content'])
+    return normalize_content(re.sub(
+        r'(?ms)^챔피언 & 아이템\n\n.*?(?=^아이템 우선순위\n)',
+        lambda _: f'챔피언 & 아이템\n\n{examples}\n\n', entry['content']))
+
+
+def normalize_content(content):
+    return re.sub(r'(?m)^([ \t]*(?:[·•*-][ \t]*)?)(?:저장된[ \t]*)?아이템(?:[ \t]+예시)?[ \t]*:',
+                  r'\1아이템:', content)
 
 
 def read_guides(path):
@@ -159,6 +165,7 @@ def read_guides(path):
                     or not isinstance(content, str) or not content.strip()
                     or len(content) > 20000 or '\x00' in content):
                 raise ValueError('제목 또는 설명이 올바르지 않습니다.')
+            entry['content'] = normalize_content(content)
             level = entry['default_level']
             if type(level) is not int or not 1 <= level <= 10:
                 raise ValueError(f'{title}: 대표 레벨이 올바르지 않습니다.')
