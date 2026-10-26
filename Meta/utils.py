@@ -16,8 +16,8 @@ def find_db(data):
         
         # 조건별 쿼리셋 생성
         champion_qs = LolMeta.objects.filter(
-            Q(lolmetachampion__champion__name=first_keyword) |
-            Q(lolmetachampion__champion__name=cleaned_keyword)
+            Q(lolmetachampion__champion__name__icontains=first_keyword) |
+            Q(lolmetachampion__champion__name__icontains=cleaned_keyword)
         )
 
         synergy_qs = LolMeta.objects.filter(
@@ -41,8 +41,8 @@ def find_db(data):
             cleaned_kw = keyword.replace(' ', '')
             stripped_kw = keyword.strip()
             results = results.filter(
-                Q(lolmetachampion__champion__name=keyword) |
-                Q(lolmetachampion__champion__name=cleaned_kw) |
+                Q(lolmetachampion__champion__name__icontains=keyword) |
+                Q(lolmetachampion__champion__name__icontains=cleaned_kw) |
                 Q(lolmetachampion__champion__synergy__name=keyword) |
                 Q(lolmetachampion__champion__synergy__name=cleaned_kw) |
                 Q(title=stripped_kw) |
