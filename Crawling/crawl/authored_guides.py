@@ -155,7 +155,7 @@ def read_guides(path):
         seen = set()
         for entry in entries:
             title, content = entry['title'], entry['content']
-            if (not isinstance(title, str) or not title.strip()
+            if (not isinstance(title, str) or not title.strip() or len(title) > 50
                     or not isinstance(content, str) or not content.strip()
                     or len(content) > 20000 or '\x00' in content):
                 raise ValueError('제목 또는 설명이 올바르지 않습니다.')

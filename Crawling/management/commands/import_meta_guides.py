@@ -47,10 +47,12 @@ class Command(BaseCommand):
                     guide = authored.get(meta.pk)
                     if guide is None:
                         MetaGuide.objects.create(meta=meta, source='ai', level=0,
+                                                 source_id=f"authored:{entry['title']}",
                                                  content=content)
                     else:
                         guide.content = content
-                        guide.save(update_fields=['content'])
+                        guide.source_id = f"authored:{entry['title']}"
+                        guide.save(update_fields=['content', 'source_id'])
                 nonempty.add(meta.pk)
                 counts['적용'] += 1
                 self.stdout.write(f"{'예정' if options['dry_run'] else '저장'}: "
