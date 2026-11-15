@@ -1,6 +1,10 @@
-"""Collect OP.GG TFT comps with a headless browser, including board positions."""
-import tempfile
+"""Collect OP.GG TFT comps from public cards or the legacy board layout."""
 import re
+import tempfile
+from html.parser import HTMLParser
+from urllib.parse import urljoin
+
+import requests
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -81,6 +85,72 @@ def validate_record(record, *, min_units=5):
     return record
 
 
+class _CompSummaryParser(HTMLParser):
+    """Read the public composition cards served before JavaScript runs."""
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+        self.records = []
+        self.card = None
+        self.reading_title = False
+        self.avatar = None
+        self.avatar_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        slot = attrs.get('data-slot')
+        if tag == 'article' and slot == 'tft-comp':
+            self.card = {'id': attrs.get('data-comp-id'), 'title': '',
+                         'champions': [], 'complete': False}
+        if self.card is None:
+            return
+        href = attrs.get('href', '')
+        if tag == 'a' and 'deckId=' in href and 'source_url' not in self.card:
+            self.card['source_url'] = urljoin(self.url, href)
+            self.reading_title = True
+        if tag == 'div':
+            if self.avatar is not None:
+                self.avatar_depth += 1
+            elif slot == 'tft-avatar':
+                self.avatar = {'name': '', 'location': 0, 'star': 0, 'items': []}
+                self.avatar_depth = 1
+        if self.avatar is None:
+            return
+        if tag == 'span' and attrs.get('aria-label') and not self.avatar['name']:
+            self.avatar['name'] = attrs['aria-label'].strip()
+        if tag == 'img' and '/tft-item/' in attrs.get('src', ''):
+            self.avatar['items'].append(attrs.get('alt', '').strip())
+
+    def handle_data(self, data):
+        if self.reading_title:
+            self.card['title'] += data
+
+    def handle_endtag(self, tag):
+        if tag == 'a':
+            self.reading_title = False
+        if tag == 'div' and self.avatar is not None:
+            self.avatar_depth -= 1
+            if not self.avatar_depth:
+                self.card['champions'].append(self.avatar)
+                self.avatar = None
+        if tag == 'article' and self.card is not None:
+            self.card['title'] = self.card['title'].strip()
+            self.records.append(validate_record(self.card))
+            self.card = None
+
+
+def collect_opgg_summaries(timeout):
+    response = requests.get(URL, timeout=timeout)
+    response.raise_for_status()
+    parser = _CompSummaryParser(response.url)
+    parser.feed(response.text)
+    parser.close()
+    if parser.records and not re.search(r'<title>[^<]*시즌 18\b', response.text):
+        raise ValueError('OP.GG 시즌 18 페이지가 아닙니다.')
+    return parser.records
+
+
 def collect_level_guides(driver, card, timeout):
     tabs = card.find_elements(By.XPATH, './/*[text()="초중반 배치표"]')
     if not tabs:
@@ -106,11 +176,15 @@ def collect_level_guides(driver, card, timeout):
 
 
 def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
-    """Read the exact OP.GG comps URL in a headless browser.
+    """Read current summary cards, with Selenium for the legacy layout."""
+    if driver_factory is None:
+        try:
+            summaries = collect_opgg_summaries(timeout)
+        except requests.RequestException:
+            summaries = []
+        if summaries:
+            return summaries
 
-    Linux uses the deployment Firefox/GeckoDriver paths and original OP.GG
-    user-agent override. Local Chrome changes ``HeadlessChrome`` through CDP.
-    """
     options = webdriver.ChromeOptions()
     if headless:
         options.add_argument('--headless=new')
