@@ -155,6 +155,7 @@ class ReactionSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     lol_meta = serializers.SerializerMethodField()
     writer = serializers.SerializerMethodField()
+    content = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -165,3 +166,14 @@ class CommentSerializer(serializers.ModelSerializer):
     
     def get_writer(self,obj):
         return obj.writer.nickname
+
+    def get_content(self, obj):
+        # Keep the source marker in storage so repeated crawls update the same
+        # comment, but do not show the marker as part of the deck guidance.
+        content = obj.content
+        if obj.writer.is_superuser:
+            for marker in ('[롤체지지 덱 설명]\n', '[OP.GG 덱 설명]\n',
+                           '[tactics.tools 덱 팁]\n'):
+                if content.startswith(marker):
+                    return content[len(marker):]
+        return content

@@ -18,7 +18,11 @@ def _key(name):
 def _synergies(roster, synergies):
     counts = Counter()
     for champion, items in roster:
-        counts.update(synergy.name for synergy in champion.synergy.all())
+        champion_name = _key(champion.name)
+        for synergy in champion.synergy.all():
+            doubled = ((champion_name == '장로드래곤' and _key(synergy.name) == '협곡야수')
+                       or (champion_name.startswith('럭스') and _key(synergy.name) != '화신'))
+            counts[synergy.name] += 2 if doubled else 1
         for item in items:
             if '상징' in item.name:
                 name = item.name.replace('상징', '').strip()
