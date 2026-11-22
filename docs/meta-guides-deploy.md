@@ -1,6 +1,25 @@
 # 작성한 메타 설명을 배포 DB에 반영하기
 
-이번 전달 파일은 `Crawling/data/meta_guides.json`이며 62개 설명을 포함한다. DB 접속 정보·계정·로컬 DB ID는 포함하지 않는다. 기존 MetaGuide 모델을 사용하므로 이 기능 때문에 새 마이그레이션을 만들 필요는 없다. 배포 DB에는 기존 MetaGuide 마이그레이션이 이미 적용돼 있어야 한다.
+이번 전달 파일은 `Crawling/data/meta_guides.json`이며 76개 설명을 포함한다. DB 접속 정보·계정·로컬 DB ID는 포함하지 않는다. 기존 MetaGuide 모델을 사용하므로 이 기능 때문에 새 마이그레이션을 만들 필요는 없다. 배포 DB에는 기존 MetaGuide 마이그레이션이 이미 적용돼 있어야 한다.
+
+## 2026-11-22 갱신 적용
+
+OP.GG 덱 상세 페이지에서 배치·별·레벨을 읽도록 `meta_crawl`이 바뀌었다. 서버에서도 메타 수집을 먼저 실행해야 신규 덱이 생기고, 그 뒤 설명을 가져와야 연결된다. 로컬은 메타 116개, 작성 설명 76개다.
+
+```bash
+cd ~/srv/WebApplicationServer
+source ~/venv/bin/activate
+git pull --ff-only origin deploy
+python manage.py meta_crawl --dry-run
+python manage.py meta_crawl
+python manage.py import_meta_guides --update --dry-run
+python manage.py import_meta_guides --update
+```
+
+- 관리 명령 코드만 바뀌었으므로 uWSGI·Nginx 재시작과 새 마이그레이션은 필요 없다.
+- `meta_crawl` 마지막 단계에서 예전에 저장된 OP.GG 레벨 배치 중 전부 1성인 것을 2성으로 보정한다. 이번 수집에서 새로 쓴 OP.GG 배치는 제외된다.
+- OP.GG 상세 페이지를 덱마다 한 번씩 순서대로 요청하므로 OP.GG 단계가 이전보다 오래 걸린다.
+- 서버의 수집 시점이 다르면 신규 덱 제목·개수가 달라 일부 설명이 연결되지 않을 수 있다. 남은 빈 설명은 아래 "서버에 남은 빈 설명 작성하기"를 따른다.
 
 ## 2026-10-31 갱신 적용
 
@@ -53,7 +72,7 @@ python manage.py import_meta_guides --update
 
 서버 체크아웃이 deploy 브랜치인지 먼저 확인한다. 다른 브랜치라면 작업 내용을 확인한 뒤 deploy로 전환한다. Git pull이 충돌·로컬 변경 때문에 실패하면 이후 명령을 진행하기 전에 해당 상태를 해결한다.
 
-출력은 `적용 N개 / 건너뜀 N개` 한 줄만 표시한다. `--dry-run`은 DB에 저장하지 않고 `적용 예정 N개 / 건너뜀 N개`만 표시한다. 기본적으로 DB의 빈 설명 전체에 대해 62개 원본 중 적합한 설명을 찾는다. 하나의 원본을 여러 호환 덱에 사용할 수 있으므로 적용 수는 원본 수와 다를 수 있다. 매칭 기준은 변경하지 않았다.
+출력은 `적용 N개 / 건너뜀 N개` 한 줄만 표시한다. `--dry-run`은 DB에 저장하지 않고 `적용 예정 N개 / 건너뜀 N개`만 표시한다. 기본적으로 DB의 빈 설명 전체에 대해 76개 원본 중 적합한 설명을 찾는다. 하나의 원본을 여러 호환 덱에 사용할 수 있으므로 적용 수는 원본 수와 다를 수 있다. 매칭 기준은 변경하지 않았다.
 
 - 공백·문자 정규화와 수집 시 붙은 끝 번호를 고려한다. `Rush 9`처럼 운영을 뜻하는 숫자는 제거하지 않는다.
 - 배치 좌표와 일반 대체 아이템 차이는 허용한다. 대표 레벨 차이는 1 이내만 허용한다.

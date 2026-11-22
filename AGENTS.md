@@ -1,5 +1,9 @@
 # 프로젝트 작업 지침
 
+## 작업 전 필수
+
+모든 작업을 시작하기 전에 `docs/work-rules.md`를 먼저 읽고 그 규칙을 따른다.
+
 ## detail_info 작성
 
 이 저장소에서 메타 덱의 `detail_info`를 새로 작성하거나 수정하기 전에 `docs/templates/detail_info.md`를 읽고 따른다.

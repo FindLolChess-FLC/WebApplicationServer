@@ -8,7 +8,8 @@ from Crawling.crawl.lolchess_crawling import collect_lolchess_meta
 from Crawling.crawl.opgg_crawling import collect_opgg_meta
 from Crawling.crawl.tactics_crawling import collect_tactics_meta
 from Crawling.crawl.meta_details import sync_meta_details
-from Crawling.crawl.meta_storage import name_key, save_records
+from Crawling.crawl.meta_storage import (name_key, promote_opgg_boards,
+                                        promote_stored_opgg_guides, save_records)
 from Crawling.utils import remove_duplicates_data
 from Meta.models import Champion, Item, LolMeta, LolMetaChampion
 
@@ -74,9 +75,12 @@ class Command(BaseCommand):
             sources.append((name, records))
             self.progress(f'[{index}/7] {name}: {len(records)}개 수집 완료')
 
-        self.progress('[4/7] 유사도 검사 시작')
         champions = {name_key(champion.name): champion for champion in Champion.objects.all()}
         prices = {name: champion.price for name, champion in champions.items()}
+        for source, records in sources:
+            if source == 'opgg':
+                self.progress(f'opgg: 전체 1성 배치 2성 보정 {promote_opgg_boards(records, prices)}개')
+        self.progress('[4/7] 유사도 검사 시작')
         items = {name_key(item.name): item for item in Item.objects.all()}
         existing = defaultdict(set)
         for placed in LolMetaChampion.objects.select_related('champion').filter(champion__price__gt=0):
@@ -144,7 +148,9 @@ class Command(BaseCommand):
                     save_records(ready, champions, items)
                 self.progress('[6/7] 신규 메타 DB 반영 완료')
                 self.progress('[7/7] 상세 설명·레벨 배치 DB 반영 시작')
-                sync_meta_details(sources, write=self.progress)
+                synced = sync_meta_details(sources, write=self.progress)
+                self.progress('저장된 opgg 레벨 배치 2성 보정 '
+                              f'{promote_stored_opgg_guides(prices, synced)}개')
                 self.progress('[7/7] 상세 설명·레벨 배치 DB 반영 완료')
         except ValueError as exc:
             raise CommandError(f'상세 정보 DB 반영 실패: {exc}') from exc
