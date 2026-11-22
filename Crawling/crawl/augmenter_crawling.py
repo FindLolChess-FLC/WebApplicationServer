@@ -8,6 +8,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
+from Crawling.crawl.browser import create_driver
+
 
 EXTRACT_SCRIPT = r"""
 const root = JSON.parse(document.querySelector('#__NEXT_DATA__').textContent);
@@ -106,7 +108,7 @@ def collect_augments(season=18, *, headless=True, timeout=30):
     options.add_argument('--disable-dev-shm-usage')
     with tempfile.TemporaryDirectory(prefix='flc-augment-chrome-') as profile:
         options.add_argument(f'--user-data-dir={profile}')
-        driver = webdriver.Chrome(options=options)
+        driver = create_driver(options, headless=headless)
         try:
             driver.set_page_load_timeout(timeout)
             driver.get(f'https://lolchess.gg/augments/set{season}?type=all')

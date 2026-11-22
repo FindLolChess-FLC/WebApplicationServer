@@ -639,7 +639,6 @@ class DeleteIdView(APIView):
         
         return Response({'resultcode': 'FAIL', 'message': '현재 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-
 # 즐겨 찾기 조회
 class CheckFavoriteView(APIView):
     permission_classes = [IsAuthenticatedAndTokenVerified]

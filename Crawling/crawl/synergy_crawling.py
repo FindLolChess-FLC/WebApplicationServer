@@ -5,8 +5,11 @@ import warnings
 from urllib.parse import urlparse
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+
+from Crawling.crawl.browser import create_driver
 
 GUIDE_SCRIPT = r"""
 function text(node) {
@@ -89,6 +92,22 @@ def build_records(cards, rows):
     return records
 
 
+def _navigate_to_synergies(driver, url, selector, timeout):
+    for attempt in range(2):
+        try:
+            driver.get(url)
+        except TimeoutException:
+            # The DOM may be usable even when a secondary resource times out.
+            pass
+        try:
+            return WebDriverWait(driver, timeout).until(
+                lambda current: current.find_elements(By.CSS_SELECTOR, selector)
+            )
+        except TimeoutException as exc:
+            if attempt:
+                raise ValueError(f'시너지 페이지 데이터를 찾지 못했습니다: {url}') from exc
+
+
 def collect_synergies(season=18, *, headless=True, timeout=30):
     if isinstance(season, bool) or not isinstance(season, int) or season < 1:
         raise ValueError('시즌은 양의 정수여야 합니다.')
@@ -102,7 +121,7 @@ def collect_synergies(season=18, *, headless=True, timeout=30):
     with tempfile.TemporaryDirectory(prefix='flc-synergy-chrome-') as profile:
         # An isolated profile prevents conflicts with the user's open Chrome session.
         options.add_argument(f'--user-data-dir={profile}')
-        driver = webdriver.Chrome(options=options)
+        driver = create_driver(options, headless=headless)
         try:
             driver.set_page_load_timeout(timeout)
             base = f'https://lolchess.gg/synergies/set{season}'
@@ -111,10 +130,7 @@ def collect_synergies(season=18, *, headless=True, timeout=30):
                 (base + '/guide', 'div.header > h4', GUIDE_SCRIPT),
                 (base, 'td.name .trait-stat > .name', STATS_SCRIPT),
             ):
-                driver.get(url)
-                WebDriverWait(driver, timeout).until(
-                    lambda d: d.find_elements(By.CSS_SELECTOR, selector)
-                )
+                _navigate_to_synergies(driver, url, selector, timeout)
                 headings = driver.find_elements(By.TAG_NAME, 'h2')
                 if not any(re.search(rf'시즌\s+{season}\s+시너지', h.text) for h in headings):
                     raise ValueError(f'요청한 시즌{season} 페이지가 아닙니다: {driver.current_url}')

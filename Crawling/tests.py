@@ -1,16 +1,51 @@
 """DB-free regression tests: python -m unittest Crawling.tests -v."""
 import unittest
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
+from selenium.common.exceptions import TimeoutException
 
 from Crawling.crawl import synergy_crawling as crawler
 from Crawling.crawl import item_crawling as item_crawler
 from Crawling.crawl import augmenter_crawling as augment_crawler
 from Crawling.crawl import champ_crawling as champion_crawler
+from Crawling.crawl import browser as crawl_browser
+from Crawling.crawl import cloudinary_assets
+from Crawling.crawl import lolchess_crawling as lolchess_crawler
 from Crawling.img_crawl import save_item as item_images
-from Crawling.img_crawl.recolor_synergy import black_svg
 from Crawling.crawl.lolchess_crawling import parse_lolchess_meta
 from Crawling.utils import jacaard_similarity, remove_duplicates_data, similar_meta_champions
+
+
+class BrowserTests(unittest.TestCase):
+    @patch.object(crawl_browser, '_is_linux', return_value=True)
+    @patch.object(crawl_browser.Path, 'is_file', return_value=True)
+    @patch.object(crawl_browser.webdriver, 'Firefox')
+    @patch.object(crawl_browser.webdriver, 'Chrome')
+    def test_linux_uses_original_headless_firefox_even_with_chromedriver(
+            self, chrome, firefox, _files, _linux):
+        with patch.dict(crawl_browser.os.environ,
+                        {'CHROME_BIN': '/snap/bin/chromium',
+                         'CHROMEDRIVER_PATH': '/snap/bin/chromium.chromedriver'}):
+            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions(),
+                                        firefox_user_agent='test-agent')
+        options = firefox.call_args.kwargs['options']
+        self.assertEqual(options.binary_location, '/usr/bin/firefox')
+        self.assertIn('--headless', options.arguments)
+        self.assertEqual(options.page_load_strategy, 'eager')
+        self.assertEqual(options.preferences['intl.accept_languages'], 'ko,ko-KR,ko-kr')
+        self.assertEqual(options.preferences['general.useragent.override'], 'test-agent')
+        self.assertEqual(firefox.call_args.kwargs['service'].path,
+                         '/usr/local/bin/geckodriver')
+        firefox.return_value.set_window_size.assert_called_once_with(1440, 900)
+        chrome.assert_not_called()
+
+    @patch.object(crawl_browser, '_is_linux', return_value=True)
+    @patch.object(crawl_browser.Path, 'is_file', return_value=False)
+    @patch.object(crawl_browser.webdriver, 'Chrome')
+    def test_linux_missing_firefox_fails_without_chrome_fallback(self, chrome, _files, _linux):
+        with self.assertRaisesRegex(RuntimeError, 'GECKODRIVER_PATH'):
+            crawl_browser.create_driver(crawl_browser.webdriver.ChromeOptions())
+        chrome.assert_not_called()
 
 
 def card(name='개화', **changes):
@@ -19,16 +54,22 @@ def card(name='개화', **changes):
 
 
 class SynergyTests(unittest.TestCase):
-    def test_recolor_synergy_svg_preserves_transparency(self):
-        original = (b'<svg xmlns="http://www.w3.org/2000/svg" fill="none">'
-                    b'<path fill="white" d="M0 0h2v2z"/></svg>')
-        result, changed = black_svg(original)
-        self.assertTrue(changed)
-        self.assertIn(b'fill="black"', result)
-        self.assertIn(b'<svg xmlns="http://www.w3.org/2000/svg" fill="none">', result)
-        self.assertEqual(black_svg(result), (result, False))
-        with self.assertRaises(ValueError):
-            black_svg(original.replace(b'fill="white"', b'fill="red"'))
+    def test_navigation_timeout_uses_loaded_synergy_dom(self):
+        driver = MagicMock()
+        driver.get.side_effect = TimeoutException('secondary resource timed out')
+        driver.find_elements.return_value = ['trait']
+        self.assertEqual(crawler._navigate_to_synergies(
+            driver, 'https://lolchess.gg/synergies/set18/guide', 'div.header > h4', 0),
+            ['trait'])
+        driver.get.assert_called_once()
+
+    def test_empty_synergy_page_retries_once(self):
+        driver = MagicMock()
+        driver.find_elements.side_effect = [[], ['trait']]
+        self.assertEqual(crawler._navigate_to_synergies(
+            driver, 'https://lolchess.gg/synergies/set18/guide', 'div.header > h4', 0),
+            ['trait'])
+        self.assertEqual(driver.get.call_count, 2)
 
     def test_order_by_count_preserves_repeated_tier(self):
         rows = [{'label': '11 개화', 'tier': 'chromatic'},
@@ -113,6 +154,79 @@ class SynergyTests(unittest.TestCase):
 
 
 class ItemTests(unittest.TestCase):
+    def test_visible_item_uses_serialized_description_and_recipe(self):
+        source = {'items': [
+            {'key': 'Helm', 'name': '적응형 투구',
+             'imageUrl': 'https://cdn.example.com/helm.png',
+             'desc': '마나 증가<br><br>방어력 증가',
+             'compositions': ['Cloak', 'Tear']},
+            {'key': 'Cloak', 'name': '음전자 망토', 'desc': '저항력 증가',
+             'imageUrl': 'https://cdn.example.com/cloak.png'},
+            {'key': 'Tear', 'name': '여신의 눈물', 'desc': '마나 증가',
+             'imageUrl': 'https://cdn.example.com/tear.png'},
+        ]}
+        card = item_crawler._source_card(
+            '적응형 투구', 'https://cdn.example.com/helm.png', source)
+        self.assertEqual(card['effect'], '마나 증가 방어력 증가')
+        self.assertEqual(card['recipe_srcs'],
+                         ['https://cdn.example.com/cloak.png',
+                          'https://cdn.example.com/tear.png'])
+        with self.assertRaisesRegex(ValueError, '일치하지'):
+            item_crawler._source_card('적응형 투구',
+                                     'https://cdn.example.com/wrong.png', source)
+
+    def test_browser_percent_encoding_matches_source_korean_filename(self):
+        source = {'items': [{
+            'key': 'Radiant', 'name': '빛나는 크라켄의 분노',
+            'desc': '효과', 'imageUrl': 'https://cdn.example.com/크라켄.jpg'}]}
+        row = item_crawler._source_card(
+            '빛나는 크라켄의 분노',
+            'https://cdn.example.com/%ED%81%AC%EB%9D%BC%EC%BC%84.jpg', source)
+        self.assertEqual(row['effect'], '효과')
+
+    def test_recipe_url_matches_encoded_component_image(self):
+        components = self.components()
+        components[0]['img_src'] = 'https://cdn.example.com/%EA%B2%80.png'
+        cards = [{'name': '완성 아이템', 'effect': '효과',
+                  'img_src': 'https://cdn.example.com/completed.png',
+                  'recipe_srcs': ['https://cdn.example.com/검.png',
+                                  components[1]['img_src']]}]
+        result = item_crawler.build_records(cards, components)
+        self.assertEqual(result[0]['item1'], '재료 0')
+
+    def test_augmented_emblem_reference_keeps_longer_compatible_effect(self):
+        source = {'items': [
+            {'key': 'FloraEmblem', 'name': '꽃 상징', 'desc': '특성 획득',
+             'imageUrl': 'https://cdn.example.com/emblem.png'},
+            {'key': 'FloraEmblemAugment', 'name': '꽃 상징',
+             'desc': '특성 획득. 효과 50% 증가',
+             'imageUrl': 'https://cdn.example.com/emblem.png'},
+        ]}
+        row = item_crawler._source_card(
+            '꽃 상징', 'https://cdn.example.com/emblem.png', source)
+        self.assertEqual(row['effect'], '특성 획득. 효과 50% 증가')
+
+    def test_game_mode_variant_uses_base_key_for_shared_image(self):
+        source = {'items': [
+            {'key': 'Blade', 'name': '도박꾼의 칼날', 'desc': '공격 속도 1%',
+             'imageUrl': 'https://cdn.example.com/blade.png'},
+            {'key': 'BladeHR', 'name': '도박꾼의 칼날', 'desc': '공격 속도 2%',
+             'imageUrl': 'https://cdn.example.com/blade.png'},
+        ]}
+        row = item_crawler._source_card(
+            '도박꾼의 칼날', 'https://cdn.example.com/blade.png', source)
+        self.assertEqual(row['effect'], '공격 속도 1%')
+
+    def test_component_translation_can_differ_from_source_display_name(self):
+        source = {'items': [{'key': 'BFSword', 'name': 'B.F. Sword',
+                             'desc': '공격력 +10',
+                             'imageUrl': 'https://cdn.example.com/BFSword.png'}]}
+        row = item_crawler._source_card(
+            'B.F. 대검', 'https://cdn.example.com/BFSword.png',
+            source, component=True)
+        self.assertEqual(row['name'], 'B.F. 대검')
+        self.assertEqual(row['effect'], '공격력 +10')
+
     def components(self):
         return [
             {
@@ -187,7 +301,98 @@ class AugmentTests(unittest.TestCase):
             )
 
 
+class CloudinaryAssetTests(unittest.TestCase):
+    def test_public_id_uses_same_folder_and_filename_as_uploader(self):
+        self.assertEqual(cloudinary_assets.public_id_for(
+            'augment', {'name': '꽃 +', 'tier': 'Gold'}), 'tft/증강/골드/꽃+')
+        self.assertEqual(cloudinary_assets.public_id_for(
+            'item', {'name': '적응형 투구'}), 'tft/아이템/적응형투구')
+
+    @patch.object(cloudinary_assets, 'config', return_value='dcc862pgc')
+    @patch.object(cloudinary_assets.cloudinary, 'config')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources_by_ids')
+    def test_admin_lookup_preserves_actual_versioned_urls_and_plus_names(
+            self, bulk, single, _configure, _config):
+        url = 'https://res.cloudinary.com/dcc862pgc/image/upload/v123/tft/item.png'
+        bulk.return_value = {'resources': [
+            {'public_id': 'tft/증강/골드/꽃', 'secure_url': url}]}
+        single.return_value = {'resources': [
+            {'public_id': 'tft/증강/골드/꽃+',
+             'secure_url': url.replace('v123', 'v456')}]}
+        original = [{'name': '꽃', 'tier': 'Gold', 'img_src': 'source'},
+                    {'name': '꽃+', 'tier': 'Gold', 'img_src': 'source'}]
+        result = cloudinary_assets.resolve_existing_urls('augment', original)
+        self.assertEqual([row['img_src'] for row in result],
+                         [url, url.replace('v123', 'v456')])
+        self.assertEqual(original[0]['img_src'], 'source')
+        bulk.assert_called_once_with(['tft/증강/골드/꽃'], max_results=1,
+                                     resource_type='image', type='upload')
+        single.assert_called_once_with(resource_type='image', type='upload',
+                                       prefix='tft/증강/골드/꽃+', max_results=100)
+
+    @patch.object(cloudinary_assets, 'config', return_value='dcc862pgc')
+    @patch.object(cloudinary_assets.cloudinary, 'config')
+    @patch.object(cloudinary_assets.cloudinary.api, 'resources_by_ids',
+                  return_value={'resources': []})
+    def test_missing_asset_cannot_be_saved_as_fabricated_url(self, *_mocks):
+        with self.assertRaisesRegex(ValueError, 'tft/아이템/적응형투구'):
+            cloudinary_assets.resolve_existing_urls(
+                'item', [{'name': '적응형 투구', 'img_src': 'source'}])
+
+    @patch('Crawling.management.commands.data_crawl.save_synergies')
+    @patch('Crawling.management.commands.data_crawl.resolve_existing_urls',
+           side_effect=ValueError('missing image'))
+    @patch('Crawling.management.commands.data_crawl.synergy_crawling',
+           return_value=[{'name': '개화'}])
+    def test_data_crawl_stops_before_db_write_on_missing_asset(
+            self, collect, _resolve, save):
+        from io import StringIO
+        from Crawling.management.commands.data_crawl import Command
+
+        with self.assertRaisesRegex(ValueError, 'missing image'):
+            Command(stdout=StringIO()).handle()
+        collect.assert_called_once_with(dry_run=True)
+        save.assert_not_called()
+
+
 class ChampionTests(unittest.TestCase):
+    def page_data(self, shown_images):
+        return {'champions': [
+            {'name': '라칸', 'cost': [1], 'traits': ['Fae'],
+             'imageUrl': 'https://cdn.example.com/rakan.jpg'}],
+            'traits': [{'key': 'Fae', 'name': '요정'}],
+            'seasons': ['set18', 'set18'], 'shownImages': shown_images}
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_headless_empty_card_grid_uses_complete_season_source(self, wait):
+        driver = MagicMock()
+        driver.execute_script.return_value = self.page_data([])
+        wait.return_value.until.side_effect = [
+            self.page_data([]), TimeoutException('grid not rendered')]
+        with self.assertWarnsRegex(UserWarning, '원본 데이터'):
+            records = champion_crawler._extract_champion_page(driver, 18, 30)
+        self.assertEqual([record['name'] for record in records], ['라칸'])
+        self.assertEqual(records[0]['img_src'], 'https://cdn.example.com/rakan.jpg')
+        self.assertEqual(wait.call_args_list[1].args[1], 10)
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_partial_card_grid_does_not_silently_use_source(self, wait):
+        driver = MagicMock()
+        driver.execute_script.return_value = self.page_data(['unmatched-image'])
+        wait.return_value.until.side_effect = [
+            self.page_data([]), TimeoutException('partial grid')]
+        with self.assertRaisesRegex(ValueError, '화면 목록과 원본'):
+            champion_crawler._extract_champion_page(driver, 18, 30)
+
+    @patch.object(champion_crawler, 'WebDriverWait')
+    def test_source_season_must_match_requested_season(self, wait):
+        driver = MagicMock()
+        wait.return_value.until.return_value = {
+            **self.page_data([]), 'seasons': ['set17', 'set18']}
+        with self.assertRaisesRegex(ValueError, '시즌18'):
+            champion_crawler._extract_champion_page(driver, 18, 30)
+
     def test_public_champion_maps_first_cost_and_trait_name(self):
         image = 'https://cdn.example.com/rakan.jpg'
         champions = [
@@ -215,6 +420,36 @@ class ChampionTests(unittest.TestCase):
 
 
 class LolchessMetaTests(unittest.TestCase):
+    @patch.object(lolchess_crawler, 'fetch_lolchess_json')
+    def test_collector_uses_public_data_api_instead_of_meta_page(self, fetch_json):
+        champion_refs = {'season': 'set18', 'champions': [
+            {'key': 'Hero', 'name': '영웅', 'cost': [1],
+             'imageUrl': 'https://cdn.lolchess.gg/hero.jpg'},
+        ]}
+        item_refs = {'season': 'set18', 'items': [
+            {'key': 'Sword', 'name': '검'}]}
+        guide_data = {'guideDecks': [{
+            'teamBuilderKey': 'guide1', 'name': '시험 덱', 'season': 'set18',
+            'data': {'set': 'set18', 'slots': [
+                {'index': index, 'champion': 'Hero', 'items': ['Sword']}
+                for index in range(5)]},
+        }]}
+        fetch_json.side_effect = [champion_refs, item_refs, guide_data]
+
+        records = lolchess_crawler.collect_lolchess_meta()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(fetch_json.call_args_list, [
+            call('data/champions', params={'hl': 'ko', 'season': 'set18'},
+                 timeout=30),
+            call('data/items', params={'hl': 'ko', 'season': 'set18'},
+                 timeout=30),
+            call('guide-decks',
+                 params={'q': 'live', 'hl': 'ko', 'newSet': 1}, timeout=30),
+        ])
+
+
+
     def test_hidden_zero_cost_unit_is_kept_with_source_image(self):
         champion_refs = {'season': 'set18', 'champions': [
             {'key': 'Hero', 'name': '영웅', 'cost': [1],
@@ -248,16 +483,24 @@ class LolchessMetaTests(unittest.TestCase):
                          'https://cdn.lolchess.gg/summon.png')
         self.assertFalse(record['champions'][1]['is_summon'])
         self.assertEqual(record['champions'][1]['items'], ['검'])
+        self.assertEqual(record['source_url'],
+                         'https://lolchess.gg/builder/guide/guide1?type=guide&hl=ko')
 
 
 class MetaSimilarityTests(unittest.TestCase):
-    def test_one_low_cost_swap_and_extra_flex_unit_are_duplicates(self):
+    def test_one_low_cost_swap_is_distinct_but_extra_flex_is_duplicate(self):
         prices = dict.fromkeys('ABCDEFGHI', 1)
         prices.update({'G': 4, 'H': 5})
         original = list('ABCDEFGH')
-        self.assertLess(jacaard_similarity(original, list('ACDEFGHI')), 0.8)
-        self.assertTrue(similar_meta_champions(original, list('ACDEFGHI'), prices))
+        self.assertLess(jacaard_similarity(original, list('ACDEFGHI')), 0.85)
+        self.assertFalse(similar_meta_champions(original, list('ACDEFGHI'), prices))
         self.assertTrue(similar_meta_champions(original, list('ABCDEFGHI'), prices))
+
+    def test_added_high_cost_carry_is_distinct(self):
+        prices = dict.fromkeys('ABCDEFGHI', 1)
+        prices['I'] = 5
+        self.assertFalse(similar_meta_champions(list('ABCDEFGH'),
+                                                list('ABCDEFGHI'), prices))
 
     def test_high_cost_carry_swap_is_distinct_even_above_jaccard_threshold(self):
         prices = dict.fromkeys('ABCDEFGHIJK', 1)
@@ -272,6 +515,6 @@ class MetaSimilarityTests(unittest.TestCase):
                     'different': {'챔프': list('JKLMNOPQ')}}
         prices = dict.fromkeys('ABCDEFGHIJKLMNOPQ', 1)
         result = remove_duplicates_data(old, incoming, prices=prices)
-        self.assertEqual(list(result), ['old', 'different'])
+        self.assertEqual(list(result), ['old', 'variant', 'different'])
         self.assertEqual(list(old), ['old'])
         self.assertEqual(list(incoming), ['variant', 'different'])

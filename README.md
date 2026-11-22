@@ -3,6 +3,17 @@ FLC 장고 웹 애플리케이션 서버
 
 ## 시즌18 데이터 수집
 
+배포 서버는 기초 데이터를 수집할 때 이미 업로드된 Cloudinary 자산의 실제 URL을
+조회해 저장합니다. 이미지 파일을 서버에 내려받거나 업로드하지 않습니다.
+`CLOUDNARY_NAME`, `CLOUDNARY_KEY`, `CLOUDNARY_SECRET`이 필요합니다.
+
+```sh
+python manage.py migrate
+python manage.py data_crawl
+python manage.py meta_crawl
+```
+
+
 ```sh
 # 기본은 DB에 저장하지 않습니다.
 python manage.py synergy_crawl --season 18 --output synergies.json

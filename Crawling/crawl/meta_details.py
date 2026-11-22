@@ -99,3 +99,4 @@ def sync_meta_details(sources, *, dry_run=False, write=print):
                         'content': guide['content'], 'champions': guide['champions'],
                     })
     write('상세 설명·레벨 배치 DB 반영 완료')
+    return set(ready)

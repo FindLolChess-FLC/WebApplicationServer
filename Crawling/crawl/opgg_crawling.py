@@ -1,6 +1,11 @@
-"""Collect OP.GG TFT comps with a headless browser, including board positions."""
-import tempfile
+"""Collect OP.GG TFT comps from public cards or the legacy board layout."""
+import json
 import re
+import tempfile
+from html.parser import HTMLParser
+from urllib.parse import urljoin
+
+import requests
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -81,6 +86,141 @@ def validate_record(record, *, min_units=5):
     return record
 
 
+class _CompSummaryParser(HTMLParser):
+    """Read the public composition cards served before JavaScript runs."""
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+        self.records = []
+        self.card = None
+        self.reading_title = False
+        self.avatar = None
+        self.avatar_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        slot = attrs.get('data-slot')
+        if tag == 'article' and slot == 'tft-comp':
+            self.card = {'id': attrs.get('data-comp-id'), 'title': '',
+                         'champions': [], 'complete': False}
+        if self.card is None:
+            return
+        href = attrs.get('href', '')
+        if tag == 'a' and 'deckId=' in href and 'source_url' not in self.card:
+            self.card['source_url'] = urljoin(self.url, href)
+            self.reading_title = True
+        if tag == 'div':
+            if self.avatar is not None:
+                self.avatar_depth += 1
+            elif slot == 'tft-avatar':
+                self.avatar = {'name': '', 'location': 0, 'star': 0, 'items': []}
+                self.avatar_depth = 1
+        if self.avatar is None:
+            return
+        if tag == 'span' and attrs.get('aria-label') and not self.avatar['name']:
+            self.avatar['name'] = attrs['aria-label'].strip()
+        if tag == 'img' and '/tft-item/' in attrs.get('src', ''):
+            self.avatar['items'].append(attrs.get('alt', '').strip())
+
+    def handle_data(self, data):
+        if self.reading_title:
+            self.card['title'] += data
+
+    def handle_endtag(self, tag):
+        if tag == 'a':
+            self.reading_title = False
+        if tag == 'div' and self.avatar is not None:
+            self.avatar_depth -= 1
+            if not self.avatar_depth:
+                self.card['champions'].append(self.avatar)
+                self.avatar = None
+        if tag == 'article' and self.card is not None:
+            self.card['title'] = self.card['title'].strip()
+            self.records.append(validate_record(self.card))
+            self.card = None
+
+
+FLIGHT_PATTERN = re.compile(r'self\.__next_f\.push\(\[1,"((?:[^"\\]|\\.)*)"\]\)')
+
+
+def read_deck_detail(html):
+    """Return the selected deck's embedded detail data from the server-rendered page."""
+    flight = ''.join(json.loads(f'"{chunk}"') for chunk in FLIGHT_PATTERN.findall(html))
+    marker = flight.find('"initialDetail":')
+    if marker < 0:
+        raise ValueError('OP.GG 덱 상세 데이터를 찾지 못했습니다.')
+    detail, _ = json.JSONDecoder().raw_decode(flight, flight.index('{', marker))
+    return detail
+
+
+def _resolve(detail, value):
+    """Follow the page's `$id:...:initialDetail:path` references inside the same detail."""
+    if not isinstance(value, str) or not value.startswith('$'):
+        return value
+    _, found, path = value.partition(':initialDetail:')
+    if not found:
+        raise ValueError(f'OP.GG 상세 참조를 해석할 수 없습니다: {value}')
+    for key in path.split(':'):
+        detail = detail[int(key)] if key.isdecimal() else detail[key]
+    return detail
+
+
+def apply_deck_detail(record, detail):
+    """Fill a summary card with the deck's observed stars, items, displayed cells and levels."""
+    data = detail['data']
+    comp, guide = data['comp'], data['guide']
+    if data['generation'].get('set') != 18 or comp['name'].strip() != record['title']:
+        raise ValueError(f'{record["title"]}: 시즌 18 덱 상세 데이터가 아닙니다.')
+    positioning = guide.get('positioning') or {}
+    cells = {unit['unit']['name']: unit['cell'] for unit in positioning.get('units', [])
+             if positioning.get('available') and isinstance(unit.get('cell'), int)}
+
+    def slot(unit, items=()):
+        return {'name': unit['name'], 'location': cells[unit['name']] + 1, 'star': unit['star'],
+                'items': [_resolve(detail, item)['name'] for item in items]}
+
+    try:
+        champions = [slot(unit, unit['items']) for unit in comp['units']]
+    except KeyError:
+        return record
+    guides = []
+    for stage in (guide.get('timeline') or {}).get('levels', []):
+        ranked = sorted(stage['units'], key=lambda row: row['appearanceRate'], reverse=True)
+        units = [row['unit'] for row in ranked if row['unit']['cost'] > 0][:stage['level']]
+        if len(units) == stage['level'] and all(unit['name'] in cells for unit in units):
+            guides.append({'level': stage['level'], 'content': '', 'stars_observed': True,
+                           'champions': [slot(unit) for unit in units]})
+    return {**record, 'champions': champions, 'complete': True, 'stars_observed': True,
+            'default_level': comp['level'], 'guides': guides}
+
+
+def collect_deck_details(records, timeout):
+    """Read each card's deck page in order; cards without displayed cells stay summaries."""
+    detailed = []
+    for record in records:
+        if record.get('source_url'):
+            response = requests.get(record['source_url'], timeout=timeout)
+            response.raise_for_status()
+            record = apply_deck_detail(record, read_deck_detail(response.text))
+            for guide in record.get('guides', []):
+                validate_record({'title': record['title'], 'complete': True,
+                                 'champions': guide['champions']}, min_units=1)
+        detailed.append(validate_record(record))
+    return detailed
+
+
+def collect_opgg_summaries(timeout):
+    response = requests.get(URL, timeout=timeout)
+    response.raise_for_status()
+    parser = _CompSummaryParser(response.url)
+    parser.feed(response.text)
+    parser.close()
+    if parser.records and not re.search(r'<title>[^<]*시즌 18\b', response.text):
+        raise ValueError('OP.GG 시즌 18 페이지가 아닙니다.')
+    return collect_deck_details(parser.records, timeout)
+
+
 def collect_level_guides(driver, card, timeout):
     tabs = card.find_elements(By.XPATH, './/*[text()="초중반 배치표"]')
     if not tabs:
@@ -106,11 +246,15 @@ def collect_level_guides(driver, card, timeout):
 
 
 def collect_opgg_meta(*, headless=True, timeout=30, driver_factory=None):
-    """Read the exact OP.GG comps URL in a headless browser.
+    """Read current summary cards, with Selenium for the legacy layout."""
+    if driver_factory is None:
+        try:
+            summaries = collect_opgg_summaries(timeout)
+        except requests.RequestException:
+            summaries = []
+        if summaries:
+            return summaries
 
-    Linux uses the deployment Firefox/GeckoDriver paths and original OP.GG
-    user-agent override. Local Chrome changes ``HeadlessChrome`` through CDP.
-    """
     options = webdriver.ChromeOptions()
     if headless:
         options.add_argument('--headless=new')
